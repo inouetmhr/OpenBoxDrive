@@ -1,0 +1,36 @@
+{
+	"name": "__MSG_extension_name__",
+	"description": "__MSG_extension_description__",
+	"version": "0.5.0",
+	"manifest_version": 3,
+	"default_locale": "en",
+	"icons": {
+		"48": "/icons/icon48.png",
+		"128": "/icons/icon128.png"
+	},
+	"options_page": "setup/index.html",
+	"minimum_chrome_version": "88",
+	"action": {
+		"default_popup": "popup.html"
+	},
+	"permissions": [
+		"activeTab",
+		"storage",
+		"notifications",
+		"contextMenus",
+		"nativeMessaging",
+		"scripting"
+	],
+	"background": {
+		"service_worker": "background.js",
+		"type": "module"
+	},
+	"commands": {
+		"_execute_action": {
+		  "suggested_key": {
+			"windows": "Ctrl+Shift+B"
+
+		  }
+		}
+	  }
+}

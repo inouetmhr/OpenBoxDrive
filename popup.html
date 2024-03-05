@@ -1,0 +1,46 @@
+<!-- Copyright 2017 The Chromium Authors. All rights reserved.
+Use of this source code is governed by a BSD-style license that can be
+found in the LICENSE file. -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Open box drive - popup </title>
+    <style>
+      body {
+        text-align: center;
+        width: 128px;
+        margin: 16px;
+      }
+
+      #icon {
+        width: fit-content;
+        margin: 5px;
+      }
+
+      #message {
+        font-size: medium;
+      }
+
+      .rotate-anime {
+        animation: rotate 3s linear infinite;
+      }
+
+      @keyframes rotate {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+    <!--
+      - JavaScript and HTML must be in separate files
+     -->
+  </head>
+  <body>
+    <img src="./icons/icon48.png" id="icon" class="rotate-anime" alt="icon"/>
+    <div id="message">Loading.. <br>Please wait</div>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
