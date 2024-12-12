@@ -1,3 +1,12 @@
+async function waitQuerySelector(selector, node=document){ /* https://zenn.dev/doma_itachi/articles/0289cc5b40bace */
+    let obj=null;
+    for(let i=0;i<100&&!obj;i++){
+        obj=await new Promise(resolve=>setTimeout(()=>resolve(node.querySelector(selector), 10)));
+        /* console.log("!") */
+    }
+    return obj;
+  }
+
 async function getBoxDrivePath(){ // injection code (to be serialized)
 	//console.log("getBoxDrivePath");
 	const found = document.URL.match(/(https:\/\/.*\.?app.box.com)\/(file|folder)\/(\d+)/);
@@ -10,8 +19,10 @@ async function getBoxDrivePath(){ // injection code (to be serialized)
 	const dotButton = document.querySelectorAll(".ItemListBreadcrumb > button")[0];
 	if (dotButton) {
 	  dotButton.click();
-	  path = [...document.querySelectorAll("a[data-resin-target='openfolder'].menu-item"),]
-		.map((e) => e.innerText)
+	  const menuItem = "a[data-resin-target='openfolder'].menu-item";
+	  await waitQuerySelector(menuItem);
+	  path = [...document.querySelectorAll(menuItem),]
+	  		.map((e) => e.innerText)
 	  document.body.click();
 	}
 	path.push(...[
