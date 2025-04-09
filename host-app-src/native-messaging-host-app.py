@@ -10,18 +10,24 @@ import time
 #logger = logging.getLogger()
 #logger.flush = True
 
-def open_by_explorer(path):
-    path = path.rstrip("\\")
+def open_by_shell(path):
+    path = path.rstrip(os.sep)
     try:
         stats = os.stat(path)
         if stats.st_mode & 0o40000:  # directory
-            subprocess.run(["explorer", path])
+            if sys.platform == "win32":
+                subprocess.run(["explorer", path])
+            elif sys.platform == "darwin":  # MacOS
+                subprocess.run(["open", path])
             send({
                 'path': path,
                 'resultCode': 'directory_opened'
             })
         else:  # file
-            subprocess.Popen(["explorer", "/select,", path])
+            if sys.platform == "win32":
+                subprocess.Popen(["explorer", "/select,", path])
+            elif sys.platform == "darwin":  # MacOS
+                subprocess.run(["open", "-R", path])
             send({
                 'path': path,
                 'resultCode': 'file_opened'
@@ -33,14 +39,17 @@ def open_by_explorer(path):
             'err': str(e)
         })
 
-def open_by_box_drive(elements):
+def open_in_box_drive(elements):
     home = os.path.expanduser("~")
-    path = os.path.join(home, 'Box', *elements[1:])
+    if sys.platform == "darwin": # MacOS
+        path = os.path.join(home, "Library", "CloudStorage", "Box-Box", *elements[1:])
+    else:
+        path = os.path.join(home, 'Box', *elements[1:])
     try:
         stats = os.stat(path)
-    except FileNotFoundError: # Retry once after a delay
+    except FileNotFoundError:  # Retry once after a delay
         time.sleep(0.2)
-    open_by_explorer(path)
+    open_by_shell(path)
 
 def send(message_object):
     message = json.dumps(message_object)
@@ -69,7 +78,7 @@ if __name__ == "__main__":
     #logger.info(input_data)
 
     if 'filePath' in input_data:
-        open_by_explorer(input_data['filePath'])
+        open_by_shell(input_data['filePath'])
     elif 'boxPath' in input_data:
-        open_by_box_drive(input_data['boxPath'])
+        open_in_box_drive(input_data['boxPath'])
 

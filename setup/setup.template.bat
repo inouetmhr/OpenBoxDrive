@@ -14,7 +14,5 @@ if not exist "%DEST_DIR%"   mkdir "%DEST_DIR%"
 @echo on
 copy /Y native-messaging-host-app.bat "%DEST_DIR%"
 copy /Y native-messaging-host-app.py "%DEST_DIR%"
-if exist chrome-manifest.json copy /Y chrome-manifest.json "%DEST_DIR%"
-if exist edge-manifest.json copy /Y edge-manifest.json "%DEST_DIR%"
-
+copy /Y manifest-template.json "%DEST_DIR%\%BROWSER%-manifest.json"
 reg add "HKCU\%REGISTRY_KEY_PATH%" /ve /d "%DEST_DIR%\%BROWSER%-manifest.json" /f

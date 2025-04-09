@@ -6,7 +6,6 @@ import {
 	updateContextMenu,
 } from '../context-menu.js';
 import notificationUtil from '../notification-util.js';
-//import{zip,dl}from'./zip.mjs';
 
 {
 	const localeCode = chrome.i18n.getMessage('_locale_code');
@@ -24,14 +23,8 @@ document.title = chrome.i18n.getMessage('setup_page_title');
 	manifestLink.href = URL.createObjectURL(manifestBlob);
 
 	const setupZip = await common.generateSetupZip();
-	//dl({name:'nativehost-setup.zip',buffer:setupZip});
 	const zipLink = document.getElementById('setup-zip-download-link');
 	zipLink.href = URL.createObjectURL(setupZip);
-	/*
-	const setupScript = await common.generateSetupScript();
-	const scriptblob = new Blob([setupScript], {type: 'text/plain',});
-	const scriptLink = document.getElementById('setup-python-download-link');
-	scriptLink.href = URL.createObjectURL(scriptblob);*/
 }
 
 {

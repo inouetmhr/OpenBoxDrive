@@ -5,13 +5,11 @@ const description = 'Open Box Drive';
 //const applicationName = `com.github.inouetmhr.${description.toLowerCase().replace(/ /g, '_')}_${chrome.runtime.id}`;
 const applicationName = `com.github.inouetmhr.${description.toLowerCase().replace(/ /g, '_')}`
 
-const nativeMessagingHostBinaryPath = 'native-messaging-host-app.bat';
-
-const generateManifestJson = () => {
+const generateManifestJson = (nativeMessagingHostPath) => {
 	const value = {
 		name: applicationName,
 		description,
-		path: nativeMessagingHostBinaryPath,
+		path: nativeMessagingHostPath,
 		type: 'stdio',
 		allowed_origins: [
 			`chrome-extension://${chrome.runtime.id}/`,
@@ -66,35 +64,50 @@ async function getTextFromURL(url) {
 	const arrayBuffer = await blob.arrayBuffer();
   	return arrayBuffer;
 }  
-
-async function generateSetupScript() {
-	const promises = [];
-	promises.push(getTextFromURL("../host-app-src/native-messaging-host-app.bat"));
-	promises.push(getTextFromURL("../host-app-src/native-messaging-host-app.py"));
-	promises.push(getTextFromURL("./nativehost-setup.template.py"));
-	const [nativehost_bat, nativehost_py, setup_py] = await Promise.all(promises);
-	const ua = window.navigator.userAgent.toLowerCase(); 
-	const browser = (ua.indexOf(" edg/") != -1)? 'edge' : 'chrome';
-
-	const content = setup_py.replace("___NATIVEHOST_BAT___", nativehost_bat)
-							.replace("___NATIVEHOST_PY___", nativehost_py)
-							.replace("___EXTENTION_ID___", chrome.runtime.id)
-							.replace("___BROWSER___", browser);
-	return content;
-};
-
-async function generateSetupBatch(browser) {
-	const setup_bat = await getTextFromURL("nativehost-setup.template.bat");
-	const content = setup_bat.replace("___BROWSER___", browser);
-	return content;
-};
-
 async function generateSetupZip() {
+	const ua = window.navigator.userAgent.toLowerCase();
+	const isMac = ua.includes('macintosh');
+	const browser = (ua.indexOf(" edg/") !== -1) ? 'edge' : 'chrome';
+
+	const nativePyFileName = 'native-messaging-host-app.py';
+	let nativeAppFileName, manifestJsonContent, setupTemplateUrl;
+	if (isMac) {
+		nativeAppFileName = 'native-messaging-host-app.sh';
+		manifestJsonContent = generateManifestJson('___INSTDIR___/' + nativeAppFileName);
+		setupTemplateUrl = "setup.template.sh";
+	} else {
+		nativeAppFileName = 'native-messaging-host-app.bat';
+		manifestJsonContent = generateManifestJson(nativeAppFileName);
+		setupTemplateUrl = "setup.template.bat";
+	}
+
+	const filePromises = [
+		getBlobArrayBuffer(`../host-app-src/${nativeAppFileName}`),
+		getBlobArrayBuffer(`../host-app-src/${nativePyFileName}`),
+		getTextFromURL(setupTemplateUrl)
+	];
+
+	const [nativeAppBuffer, nativePyBuffer, setupTemplate] = await Promise.all(filePromises);
+	const setupScript = setupTemplate.replace("___BROWSER___", browser).replace("___APPLICATIONNAME___", applicationName);
+
+	const files = [
+		{name: nativeAppFileName, buffer: nativeAppBuffer},
+		{name: nativePyFileName, buffer: nativePyBuffer},
+		{name: "manifest-template.json", buffer: new Blob([manifestJsonContent])},
+		{name: isMac ? 'setup.sh' : 'setup.bat', buffer: new Blob([setupScript])},
+	];
+	return zip(files);
+}
+
+async function generateSetupZipWin() {
+	if (navigator.userAgent.toLowerCase().includes('macintosh')) {
+		return generateSetupZipMac();
+	};
 	const ua = window.navigator.userAgent.toLowerCase(); 
 	const browser = (ua.indexOf(" edg/") != -1)? 'edge' : 'chrome';
 
 	const manifestFileName = browser + "-manifest.json";
-	const manifestJsonContent = generateManifestJson();
+	const manifestJsonContent = generateManifestJson('native-messaging-host-app.bat');
 
 	const promises = [];
 	promises.push(getBlobArrayBuffer("../host-app-src/native-messaging-host-app.bat"));
@@ -112,10 +125,32 @@ async function generateSetupZip() {
 	return zip(files);
 };
 
+async function generateSetupZipMac() {
+	const ua = window.navigator.userAgent.toLowerCase(); 
+	const browser = (ua.indexOf(" edg/") != -1)? 'edge' : 'chrome';
+
+	const manifestFileName = "manifest-template.json";
+	const manifestJsonContent = generateManifestJson('___INSTDIR___/native-messaging-host-app.sh');
+
+	const promises = [];
+	promises.push(getBlobArrayBuffer("../host-app-src/native-messaging-host-app.sh"));
+	promises.push(getBlobArrayBuffer("../host-app-src/native-messaging-host-app.py"));
+	promises.push(getTextFromURL("setup.template.sh"));
+	const [nativehost_sh, nativehost_py, setup_template] = await Promise.all(promises);
+
+	const setup_sh = setup_template.replace("___BROWSER___", browser).replace("___APPLICATIONNAME___", applicationName);
+	const files=[
+		{name:'native-messaging-host-app.sh',buffer:nativehost_sh},
+		{name:'native-messaging-host-app.py',buffer:nativehost_py},
+		{name:manifestFileName,buffer:new Blob([manifestJsonContent])},
+		{name:'setup.sh',buffer:new Blob([setup_sh])},
+	  ];
+	return zip(files);
+};
+
 export default {
 	applicationName,
 	generateManifestJson,
 	generateRegistryInfo,
-	generateSetupScript,
 	generateSetupZip,
 };
