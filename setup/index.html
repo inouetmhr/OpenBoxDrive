@@ -62,113 +62,112 @@
 		<span lang="ja">拡張機能が更新されました。再設定をお願いします。</span>
 	</div>
 	<h1>
-		<span lang="en">Initialization</span>
-		<span lang="ja">初期設定</span>
+		<span lang="en">Initialization</span><span lang="ja">初期設定</span>
 	</h1>
 	<p>
 		<span lang="en">Those steps are required to allow the extension to work.</span>
 		<span lang="ja">これらの手順は、拡張機能を機能させるために必須です。</span>
 	</p>
+	<div id="prerequisite">
+		<h2>
+			<span lang="en">Prerequisite </span>
+			<span lang="ja">前提</span>
+		</h2>
+			<span lang="en">Install Python 3.x or higher<br></span>
+			<span lang="ja">Python 3以降をインストール (例: <a href="https://www.python.org/downloads/release/python-3131/" target="_blank"> Python 3.13</a>) <br>
+			※python.exeがPATHに登録されていること</span>
+	</div>
 	<h2>
-		<span lang="en">1. Prerequisite </span>
-		<span lang="ja">1. 前提</span>
+		<span lang="en">1. Setup</span>
+		<span lang="ja">1. 設定</span>
 	</h2>
-		<span lang="en">Install Python 3.x or higher<br></span>
-		<span lang="ja">Python 3以降をインストール (例: <a href="https://www.python.org/downloads/release/python-3131/" target="_blank"> Python 3.13</a>) <br>
-		※python.exeがPATHに登録されていること</span>
-	<h2>
-		<span lang="en">2. Setup</span>
-		<span lang="ja">2. 設定</span>
-	</h2>
-	<strong>
-		<span lang="en">In case of using batch file: </span>
-		<span lang="ja">バッチファイルを使う場合:</span>
-	</strong>
-	<br>
-		<span lang="en">Download this zip file and run setup.bat</span>
-		<span lang="ja">以下のファイルをダウンロード・展開してから setup.batを実行</span>
+	<span lang="en">Download this zip file and run setup.bat or setup.sh</span>
+	<span lang="ja">以下のファイルをダウンロード・展開してから<span id="install-instruction"><code>setup.bat</code>を実行</span></span>
 	<ul>
 		<li><a id="setup-zip-download-link" download="nativehost-setup.zip">nativehost-setup.zip</a></li>
 	</ul>
 
-	<strong>
-		<span lang="en">In case of Manual Setup:</span>
-		<span lang="ja">手動設定する場合:</span>
-	</strong>
-
-	<div class="wrap-collabsible">
+	<div class="wrap-collabsible" id="manual-setup"> <!-- manual setup -->
 		<input id="collapsible" class="toggle" type="checkbox">
-		<label for="collapsible" class="lbl-toggle">詳細を見る</label>
+		<label for="collapsible" class="lbl-toggle"> (Option)
+			<span lang="en"> In case of manual setup:</span>
+			<span lang="ja"> 手動設定する場合:</span>
+		</label>
 		<div class="collapsible-content">
-		  <div class="content-inner">
-	<ol>
-		<li>
-			<span lang="en">Create a folder in a suitable location that will not be deleted.<br>
-			※ If the folder disappears due to deletion or movement, this initial setup needs to be re-enforced.</span>
-			<span lang="ja">削除されない適当な場所にフォルダを作成する<br>
-			※ フォルダが削除や移動によって存在しなくなると本初期設定の再実施が必要</span>
-		</li>
-		<li>
-			<span lang="en">Path to the folder you created :</span>
-			<span lang="ja">作成したフォルダのpathを以下に入力（必須）</span>
-			<br>
-			<input id="dirPath" placeholder="C:\path\to">
-		</li>
-		<li>
-			<span lang="en">Save the following files in the folder you just created.</span>
-			<span lang="ja">以下のファイルを作成したフォルダに保存<br>
-			※ダウンロードブロックされる場合、別の拡張子として「名前を付けて保存」してからリネームする</span>
-			<ul>
-				<li>
-					<a id="manifest-json-download-link" download="manifest.json">manifest.json</a>
-				</li>
-				<li>
-					<a href="/host-app-src/native-messaging-host-app.bat" download="native-messaging-host-app.bat">native-messaging-host-app.bat</a>
-				</li>
-				<li>
-					<a href="/host-app-src/native-messaging-host-app.py" download="native-messaging-host-app.py">native-messaging-host-app.py</a>
-				</li>
-			</ul>
-		</li>
-		<li>
-			<span lang="en">Registry file generation, perform registry edition either from manual edition OR from launching the generated file :</span>
-			<span lang="ja">レジストリ登録</span>
-			<ul>
-				<li style="display: none;">
-					<span lang="en">(ADVANCED users only) Manual configuration from the registry editor.</span>
-					<span lang="ja">レジストリエディターから以下を手動で設定、あるいは </span>
-					<pre data-description="Key"><code id="reg-key"></code></pre>
-					<pre data-description="Value"><code id="reg-value"></code></pre>
-				</li>
-				<li>
-					<span lang="en">(PREFERRED solution) Download the generated <a class="reg-download-link">Registry registration file</a> and launch it (double-click).</span>
-					<span lang="ja"><a class="reg-download-link">レジストリ登録ファイルをダウンロード</a> して実行。<br>
-					あるいは以下の内容を手動で登録</span><br>
-					<pre><code id="reg-content"></code></pre>
-				</li>
-			</ul>
-		</li>
-	</ol>
-
-	</div>
-	</div>
+			<div class="content-inner">
+				<ol>
+					<li>
+						<span lang="en">Create a folder in a suitable location that will not be deleted.<br>
+							※ If the folder disappears due to deletion or movement, this initial setup needs to be
+							re-enforced.</span>
+						<span lang="ja">適当な場所にフォルダを作成する<br>
+							※ フォルダが削除や移動によって存在しなくなると本初期設定の再実施が必要</span>
+					</li>
+					<li>
+						<span lang="en">Path to the folder you created (required):</span>
+						<span lang="ja">作成したフォルダのpathを以下に入力（必須）</span>
+						<br>
+						<input id="dirPath" placeholder="C:\path\to">
+					</li>
+					<li>
+						<span lang="en">Save the following files in the folder you just created.</span>
+						<span lang="ja">以下のファイルを作成したフォルダに保存<br>
+							※ダウンロードブロックされる場合、別の拡張子として「名前を付けて保存」してからリネームする</span>
+						<ul>
+							<li>
+								<a id="manifest-json-download-link" download="manifest.json">manifest.json</a>
+							</li>
+							<li>
+								<a href="/host-app-src/native-messaging-host-app.bat"
+									download="native-messaging-host-app.bat">native-messaging-host-app.bat</a>
+							</li>
+							<li>
+								<a href="/host-app-src/native-messaging-host-app.py"
+									download="native-messaging-host-app.py">native-messaging-host-app.py</a>
+							</li>
+						</ul>
+					</li>
+					<li>
+						<span lang="en">Registry file generation, perform registry edition either from manual edition OR
+							from launching the generated file :</span>
+						<span lang="ja">レジストリ登録</span>
+						<ul>
+							<li style="display: none;">
+								<span lang="en">(ADVANCED users only) Manual configuration from the registry editor.</span>
+								<span lang="ja">レジストリエディターから以下を手動で設定、あるいは </span>
+								<pre data-description="Key"><code id="reg-key"></code></pre>
+								<pre data-description="Value"><code id="reg-value"></code></pre>
+							</li>
+							<li>
+								<span lang="en">(PREFERRED solution) Download the generated <a
+										class="reg-download-link">Registry registration file</a> and launch it
+									(double-click).</span>
+								<span lang="ja"><a class="reg-download-link">レジストリ登録ファイルをダウンロード</a> して実行。<br>
+									あるいは以下の内容を手動で登録</span><br>
+								<pre><code id="reg-content"></code></pre>
+							</li>
+						</ul>
+					</li>
+				</ol>
+			</div>
+		</div>
 	</div>
 
 	<h2>
-		<span lang="en">3. Confirm the Operation</span>
-		<span lang="ja">3. 動作確認</span>
+		<span lang="en">2. Confirm the setup</span>
+		<span lang="ja">2. 動作確認</span>
 	</h2>
 		<ol>
 			<li>
-				<span lang="en">Add the path to a folder to Open in Explorer</span>
-				<span lang="ja">Explorerで開く ディレクトリ/ファイル のパス</span>
+				<span lang="en">Add the path to a folder to Open in <span class="os-shell">Explorer</span></span>
+				<span lang="ja"><span class="os-shell">Explorer</span>で開く フォルダ／ファイル のパス</span>
 				<br>
 				<input id="filePathToOpen" value="C:\ProgramData\">
 			</li>
 			<li>
-				<button type="button" id="open">
-					<span lang="en">Open in Explorer</span>
-					<span lang="ja">Explorerで開く</span>
+				<button type="button" id="test-open">
+					<span lang="en">Open in <span class="os-shell">Explorer</span></span>
+					<span lang="ja"><span class="os-shell">Explorer</span>で開く</span>
 				</button>
 			</li>
 		</ol>
@@ -185,19 +184,19 @@
 	<ul id="context-menu-title-setting-container" style="display: none;"></ul>
 	<script type="module" src="./main.js"></script>
 	<p>
-		Boxのページを開いている状態で、この拡張機能のアイコン <img src="../icons/icon48.png" style="height:24px;"> 
-		をクリックすると、該当する Box DriveのフォルダがExplorerで開きます。</li>
-		
-		<p>以下おまけ
+		<a href="https://app.box.com/folder/0" target="_blank">Boxのフォルダあるいはファイルのページ</a>を開いている状態で、
+		この拡張機能のアイコン <img src="../icons/icon48.png" style="height:24px;"> をクリックすると、
+		該当する Box Driveのフォルダが<span class="os-shell">Explorer</span>で開きます。
+	</p>	
+	<div id="optional-feature">以下おまけ
 		<ul>
 			<li>file:スキームのページでも同様に動作します</li>
 			<ul>
 				<li><a href="file://C:/ProgramData/">file://C:/ProgramData/</a></li>
 			</ul>	
-			<li>上のようなfile:リンクを右クリックすることでExplorerを開けます</li>
-			<li><code>C:\ProgramData\</code> のようなファイルパス文字列を範囲選択して右クリックしてもExplorerを開けます</li>
+			<li>上のようなfile:リンクを右クリックすることで<span class="os-shell">Explorer</span>を開けます</li>
+			<li><code>C:\ProgramData\</code> のようなファイルパス文字列を範囲選択して右クリックしても<span class="os-shell">Explorer</span>を開けます</li>
 		</ul>
-		</p>
-	</p>
+	</div>
 </body>
 </html>
