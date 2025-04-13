@@ -6,7 +6,6 @@ import {
 	getContextMenuTitle,
 	updateContextMenu,
 } from '../context-menu.js';
-//import notificationUtil from '../notification-util.js';
 
 {
 	const localeCode = chrome.i18n.getMessage('_locale_code');
