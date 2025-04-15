@@ -3,7 +3,6 @@ import {
 	CONTEXT_MENU,
 	createContextMenu,
 } from './context-menu.js';
-import notificationUtil from './notification-util.js';
 
 chrome.runtime.onInstalled.addListener(details => {
 	if (details.reason === 'update') {
@@ -28,7 +27,7 @@ chrome.runtime.onStartup.addListener(createContextMenu);
 chrome.contextMenus.onClicked.addListener((info) => {
 	const extractResult = extractFilePath(info);
 	if (!extractResult.isSucceeded) {
-		notificationUtil.showNotification({
+		common.showNotification({
 			resultMessage: chrome.i18n.getMessage('not_a_file_path'),
 			path: extractResult.target,
 		});
@@ -40,7 +39,7 @@ chrome.contextMenus.onClicked.addListener((info) => {
 	chrome.runtime.sendNativeMessage(common.applicationName, messageToNative, response => {
 		console.info(response);
 
-		notificationUtil.showNotification(response);
+		common.showNotification(response);
 	});
 });
 
@@ -48,7 +47,7 @@ chrome.action.onClicked.addListener(tab => { // not fired since default_popup is
 	console.info("onClicked on: " + tab.ubrl);
 	const result = clickedAction().then((result) => {
 		if (result.result === "unsupported") {
-			notificationUtil.showNotification({
+			common.showNotification({
 				resultMessage: '',
 				path:  'This extension works only with box pages or file:// urls.'
 			});
@@ -110,7 +109,7 @@ function openBoxDrive(result){
 		const messageToNative = {boxPath: path	};
 		chrome.runtime.sendNativeMessage(common.applicationName, messageToNative, response => {
 			console.info(response);
-			notificationUtil.showNotification(response);
+			common.showNotification(response);
 		});
 	}
 };
@@ -152,7 +151,7 @@ async function clickedAction(tab)  {
 		};
 		chrome.runtime.sendNativeMessage(common.applicationName, messageToNative, response => {
 			console.info(response);
-			notificationUtil.showNotification(response);
+			common.showNotification(response);
 		});
 		return {result: "handled"};
 	}

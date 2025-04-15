@@ -182,8 +182,7 @@ Windows Registry Editor Version 5.00
 		};
 		chrome.runtime.sendNativeMessage(common.applicationName, message, response => {
 			console.info(response);
-
-			notificationUtil.showNotification(response);
+			common.showNotification(response);
 		});
 	};
 	openButton.addEventListener('click', execOpen);
