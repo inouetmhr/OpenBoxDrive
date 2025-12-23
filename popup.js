@@ -6,7 +6,7 @@ async function onClicked(){
 	//console.info("onClicked on: " + document.url);
 	const [tab] = await chrome.tabs.query({active: true, lastFocusedWindow: true});
 	console.info("onclicked on tab: " + tab.url);
-	if (tab.url.match(/(https:\/\/.*\.?app.box.com)\/(file|folder)\/(\d+)/) ||
+	if (tab.url.match(/(https:\/\/.*\.?app\.box\.com)/) ||
 		tab.url.startsWith('file://')) {
 		const response = await chrome.runtime.sendMessage({action: "onclick"});
 		//await Promise.all([response]);

@@ -43,7 +43,7 @@ chrome.contextMenus.onClicked.addListener((info) => {
 	});
 });
 
-chrome.action.onClicked.addListener(tab => { // not fired since default_popup is defined
+chrome.action.onClicked.addListener(tab => { // usually not fired because default_popup is defined
 	console.info("onClicked on: " + tab.ubrl);
 	const result = clickedAction().then((result) => {
 		if (result.result === "unsupported") {
@@ -136,7 +136,7 @@ chrome.runtime.onMessage.addListener(
 async function clickedAction(tab)  {
 	if (! tab) [tab] = await chrome.tabs.query({active: true, lastFocusedWindow: true});
 	console.info("onclick message on tab: " + tab.url);
-	if (tab.url.match(/(https:\/\/.*\.?app.box.com)\/(file|folder)\/(\d+)/)){
+	if (tab.url.match(/(https:\/\/.*\.?app\.box\.com)/)){
 		const injectionResults = await chrome.scripting.executeScript({
 				target: { tabId: tab.id },
 				files: ["box-injection.js"]
