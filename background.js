@@ -4,15 +4,43 @@ import {
 	createContextMenu,
 } from './context-menu.js';
 
+// --- Helpers ---
+
+const isBoxUrl = (url) => url && url.match(/(https:\/\/.*\.?app\.box\.com)/);
+const isFileUrl = (url) => url && url.startsWith('file://');
+
+const sendNativeRequest = (message) => {
+	chrome.runtime.sendNativeMessage(common.applicationName, message, response => {
+		console.info(response);
+		common.showNotification(response);
+	});
+};
+
+const checkUrlAndToggleAction = (tabId, url) => {
+	if (!url) return;
+
+	if (isBoxUrl(url) || isFileUrl(url)) {
+		chrome.action.setIcon({
+			tabId: tabId,
+			path: { "48": "/icons/icon48.png", "128": "/icons/icon128.png" }
+		});
+		chrome.action.enable(tabId);
+	} else {
+		chrome.action.setIcon({
+			tabId: tabId,
+			path: { "48": "/icons/icon48_gray.png", "128": "/icons/icon128_gray.png" }
+		});
+		chrome.action.disable(tabId);
+	}
+};
+
+// --- Lifecycle & Initialization ---
+
 chrome.runtime.onInstalled.addListener(details => {
 	if (details.reason === 'update') {
-		const updateRequiredPreviousVersions = [
-			'0.0.1',
-		];
+		const updateRequiredPreviousVersions = ['0.0.1'];
 		if (updateRequiredPreviousVersions.includes(details.previousVersion)) {
-			chrome.tabs.create({
-				url: `${chrome.runtime.getManifest().options_page}#update-notification`,
-			});
+			chrome.tabs.create({ url: `${chrome.runtime.getManifest().options_page}#update-notification` });
 		}
 		return;
 	}
@@ -24,6 +52,19 @@ chrome.runtime.onInstalled.addListener(details => {
 chrome.runtime.onInstalled.addListener(createContextMenu);
 chrome.runtime.onStartup.addListener(createContextMenu);
 
+// --- Tab Status Tracking ---
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+	if (changeInfo.url || tab.url) checkUrlAndToggleAction(tabId, changeInfo.url || tab.url);
+});
+
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+	const tab = await chrome.tabs.get(activeInfo.tabId);
+	checkUrlAndToggleAction(activeInfo.tabId, tab.url);
+});
+
+// --- User Actions ---
+
 chrome.contextMenus.onClicked.addListener((info) => {
 	const extractResult = extractFilePath(info);
 	if (!extractResult.isSucceeded) {
@@ -33,27 +74,47 @@ chrome.contextMenus.onClicked.addListener((info) => {
 		});
 		return;
 	}
-	const messageToNative = {
-		filePath: extractResult.path,
-	};
-	chrome.runtime.sendNativeMessage(common.applicationName, messageToNative, response => {
-		console.info(response);
-
-		common.showNotification(response);
-	});
+	sendNativeRequest({ filePath: extractResult.path });
 });
 
-chrome.action.onClicked.addListener(tab => { // usually not fired because default_popup is defined
-	console.info("onClicked on: " + tab.ubrl);
-	const result = clickedAction().then((result) => {
-		if (result.result === "unsupported") {
-			common.showNotification({
-				resultMessage: '',
-				path:  'This extension works only with box pages or file:// urls.'
-			});
-		}
-	});
+chrome.action.onClicked.addListener(async (tab) => {
+	console.info("onClicked on: " + tab.url);
+	const result = await clickedAction(tab);
+	if (result.result === "unsupported") {
+		common.showNotification({
+			resultMessage: '',
+			path: 'This extension works only with box pages or file:// urls.'
+		});
+	}
 });
+
+// --- Action Logic ---
+
+async function clickedAction(tab) {
+	if (!tab) [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+	console.info("onclick message on tab: " + tab.url);
+
+	if (isBoxUrl(tab.url)) {
+		await chrome.scripting.executeScript({
+			target: { tabId: tab.id },
+			files: ["box-injection.js"]
+		}, openBoxDrive);
+		return { result: "handled" };
+	}
+	if (isFileUrl(tab.url)) {
+		sendNativeRequest({ filePath: convertUrl2FilePath(tab.url) });
+		return { result: "handled" };
+	}
+	return { result: "unsupported" };
+}
+
+function openBoxDrive(result) {
+	const path = result?.[0]?.result;
+	console.info("Target path:", path);
+	if (path) {
+		sendNativeRequest({ boxPath: path });
+	}
+}
 
 class ExtractResult {
 	constructor(target, path) {
@@ -100,63 +161,3 @@ const convertUrl2FilePath = encodedUrl => {
 	// file://server_name/path/to/file
 	return decodedURI.replace(/^file:/, '').replace(/\//g, '\\');
 };
-
-function openBoxDrive(result){
-	//console.log(result);
-	let path = result[0].result; 
-    console.info(path);
-	if (path) {
-		const messageToNative = {boxPath: path	};
-		chrome.runtime.sendNativeMessage(common.applicationName, messageToNative, response => {
-			console.info(response);
-			common.showNotification(response);
-		});
-	}
-};
-
-chrome.runtime.onMessage.addListener(
-	// Need to be a sync function. https://stackoverflow.com/questions/44056271/chrome-runtime-onmessage-response-with-async-await
-	function(request, sender, sendResponse) {
-		if (sender.tab) {
-			console.info("message from a content script:" + sender.tab.url);
-		} else {
-			console.info("message from the extension popup");
-			if (request.action === "onclick")	{
-				(async () => { 
-					const result = await clickedAction();
-					console.log(result);
-					sendResponse(result);
-				})();
-			}
-		}
-		return true; // also need this one
-	}
-  );
-
-async function clickedAction(tab)  {
-	if (! tab) [tab] = await chrome.tabs.query({active: true, lastFocusedWindow: true});
-	console.info("onclick message on tab: " + tab.url);
-	if (tab.url.match(/(https:\/\/.*\.?app\.box\.com)/)){
-		const injectionResults = await chrome.scripting.executeScript({
-				target: { tabId: tab.id },
-				files: ["box-injection.js"]
-			},
-			openBoxDrive);
-		//console.log(injectionResults);
-		return {result: "handled"};
-	} 
-	else if (tab.url.startsWith('file://')) { // in case of file://
-		const messageToNative = {
-			filePath: convertUrl2FilePath(tab.url),
-		};
-		chrome.runtime.sendNativeMessage(common.applicationName, messageToNative, response => {
-			console.info(response);
-			common.showNotification(response);
-		});
-		return {result: "handled"};
-	}
-	else { // in case of not supported pages. 
-		// do nothing (popup shows the error mesage).
-		return {result: "unsupported"};
-	}
-}

@@ -5,10 +5,7 @@ import subprocess
 import struct
 import time
 
-#import logging
-#logging.basicConfig(filename='output.log', level=logging.INFO)
-#logger = logging.getLogger()
-#logger.flush = True
+
 
 def open_by_shell(path):
     path = path.rstrip(os.sep)
@@ -45,10 +42,18 @@ def open_in_box_drive(elements):
         path = os.path.join(home, "Library", "CloudStorage", "Box-Box", *elements[1:])
     else:
         path = os.path.join(home, 'Box', *elements[1:])
-    try:
-        stats = os.stat(path)
-    except FileNotFoundError:  # Retry once after a delay
-        time.sleep(0.2)
+        
+    # Retry mechanism for Box Drive synchronization delay
+    max_retries = 10
+    retry_interval = 0.5
+    for attempt in range(max_retries):
+        try:
+            stats = os.stat(path)
+            break # File found, break out of retry loop
+        except FileNotFoundError:
+            if attempt < max_retries - 1:
+                time.sleep(retry_interval)
+            
     open_by_shell(path)
 
 def send(message_object):
