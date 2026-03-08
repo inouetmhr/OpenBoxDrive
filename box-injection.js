@@ -7,7 +7,7 @@ async function getBoxDrivePath() {
     /(https:\/\/.*\.?app\.box\.com)(?:\/integrations)?\/(file|folder|notes|canvas|officeonline)\/(?:openOfficeOnline\?fileId=)?(\d+)/
   );
   if (!found) {
-    alert("This extension works only with box pages.");
+    alert("This page is not supported by Open Box Drive.");
     throw Error("URL unmatch: unsupported page");
   }
 
