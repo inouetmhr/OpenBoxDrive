@@ -12,18 +12,18 @@
 	"minimum_chrome_version": "88",
 	"action": {
 		"default_icon": {
-			"48": "/icons/icon48.png",
-			"128": "/icons/icon128.png"
+			"48": "/icons/icon48_gray.png",
+			"128": "/icons/icon128_gray.png"
 		}
 	},
 	"permissions": [
 		"activeTab",
-		"tabs",
 		"storage",
 		"notifications",
 		"contextMenus",
 		"nativeMessaging",
-		"scripting"
+		"scripting",
+		"declarativeContent"
 	],
 	"background": {
 		"service_worker": "background.js",

@@ -16,22 +16,51 @@ const sendNativeRequest = (message) => {
 	});
 };
 
-const checkUrlAndToggleAction = (tabId, url) => {
-	if (!url) return;
+// --- Setup declarativeContent Rule ---
 
-	if (isBoxUrl(url) || isFileUrl(url)) {
-		chrome.action.setIcon({
-			tabId: tabId,
-			path: { "48": "/icons/icon48.png", "128": "/icons/icon128.png" }
-		});
-		chrome.action.enable(tabId);
-	} else {
-		chrome.action.setIcon({
-			tabId: tabId,
-			path: { "48": "/icons/icon48_gray.png", "128": "/icons/icon128_gray.png" }
-		});
-		chrome.action.disable(tabId);
-	}
+const setupDeclarativeContent = () => {
+	// サービスワーカー内ではDOM (Image) が使えないため、OffscreenCanvas と fetch を使って画像データを生成する
+	const createIconImageData = async (imageUrl) => {
+		const response = await fetch(imageUrl);
+		const blob = await response.blob();
+		const imageBitmap = await createImageBitmap(blob);
+		const canvas = new OffscreenCanvas(imageBitmap.width, imageBitmap.height);
+		const ctx = canvas.getContext('2d');
+		ctx.drawImage(imageBitmap, 0, 0);
+		return ctx.getImageData(0, 0, imageBitmap.width, imageBitmap.height);
+	};
+
+	chrome.declarativeContent.onPageChanged.removeRules(undefined, async () => {
+		try {
+			// カラーアイコンの ImageData を非同期生成
+			const icon48ImageData = await createIconImageData('/icons/icon48.png');
+			const icon128ImageData = await createIconImageData('/icons/icon128.png');
+
+			const rule = {
+				conditions: [
+					new chrome.declarativeContent.PageStateMatcher({
+						pageUrl: { hostSuffix: 'app.box.com' },
+					}),
+					new chrome.declarativeContent.PageStateMatcher({
+						pageUrl: { schemes: ['file'] },
+					})
+				],
+				actions: [
+					new chrome.declarativeContent.SetIcon({
+						imageData: {
+							"48": icon48ImageData,
+							"128": icon128ImageData
+						}
+					})
+				]
+			};
+
+			chrome.declarativeContent.onPageChanged.addRules([rule]);
+			console.info("DeclarativeContent rules registered.");
+		} catch (e) {
+			console.error("Failed to setup declarative rule:", e);
+		}
+	});
 };
 
 // --- Lifecycle & Initialization ---
@@ -42,26 +71,16 @@ chrome.runtime.onInstalled.addListener(details => {
 		if (updateRequiredPreviousVersions.includes(details.previousVersion)) {
 			chrome.tabs.create({ url: `${chrome.runtime.getManifest().options_page}#update-notification` });
 		}
-		return;
 	}
 	if (details.reason === 'install') {
 		chrome.runtime.openOptionsPage();
 	}
+
+	setupDeclarativeContent();
 });
 
 chrome.runtime.onInstalled.addListener(createContextMenu);
 chrome.runtime.onStartup.addListener(createContextMenu);
-
-// --- Tab Status Tracking ---
-
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-	if (changeInfo.url || tab.url) checkUrlAndToggleAction(tabId, changeInfo.url || tab.url);
-});
-
-chrome.tabs.onActivated.addListener(async (activeInfo) => {
-	const tab = await chrome.tabs.get(activeInfo.tabId);
-	checkUrlAndToggleAction(activeInfo.tabId, tab.url);
-});
 
 // --- User Actions ---
 
