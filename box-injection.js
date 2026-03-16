@@ -24,13 +24,13 @@ async function getBoxDrivePath() {
   }
 
   if (typeStr === "file") {
-    const folder = document.querySelector("[class='parent-name']");
+    const folder = document.querySelector("[data-resin-target='parentfoldername']");
     if (folder && folder.href) {
       folderid = folder.href.split("/").pop();
     }
     const itemname =
       document.querySelector("h1.item-name") ||
-      document.querySelector("div.preview-header-title-section > h1");
+      document.querySelector("div.PreviewHeaderTitle > h1");
     if (itemname) fname = itemname.innerText;
   }
 
