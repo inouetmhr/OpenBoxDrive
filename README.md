@@ -38,8 +38,3 @@ npm run package
 Creates `dist/open-box-drive-<version>.zip` from the git-tracked files, without tests, scripts and other development files.
 
 See [README_ja.md](README_ja.md) for where the extension depends on the Box web page and how to fix it when Box changes.
-
-## Note
-This is a fork of the following extension.
-- https://chrome.google.com/webstore/detail/open-local-folder-by-expl/ehidkllolkmedbkjbdkcgabdadcfppfg?hl=ja
-- https://github.com/tksugimoto/chrome-extension_open-local-folder-by-explorer

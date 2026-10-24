@@ -109,8 +109,3 @@ API や埋め込み JSON の形が変わった場合は、`fetchFolderPath` や 
 ## ライセンス
 - MITライセンス
 - PetitZip ライブラリ https://github.com/McbeEringi/petit/blob/main/docs/zip.md を `setup/zip.mjs` として同梱しています
-
-## 謝辞
-これは以下の拡張機能の fork です。
-  - https://chrome.google.com/webstore/detail/open-local-folder-by-expl/ehidkllolkmedbkjbdkcgabdadcfppfg?hl=ja
-  - https://github.com/tksugimoto/chrome-extension_open-local-folder-by-explorer
