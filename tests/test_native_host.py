@@ -128,6 +128,35 @@ class OpenBoxPathTest(TempDirTestCase):
         self.sleep.assert_not_called()
 
 
+class PingTest(TempDirTestCase):
+    def setUp(self):
+        super().setUp()
+        self.patch(host.os.path, "expanduser", return_value=self.dir)
+
+    def test_reports_version_and_box_drive_folder(self):
+        self.patch(sys, "platform", "darwin")
+        root = Path(self.dir, "Library", "CloudStorage", "Box-Box")
+        root.mkdir(parents=True)
+        self.assertEqual(host.handle({"ping": True}), {
+            "path": str(root), "resultCode": "pong", "version": host.HOST_VERSION, "boxDriveFound": True,
+        })
+        self.popen.assert_not_called()
+
+    def test_reports_missing_box_drive(self):
+        self.patch(sys, "platform", "win32")
+        result = host.handle({"ping": True})
+        self.assertEqual(result["path"], os.path.join(self.dir, "Box"))
+        self.assertFalse(result["boxDriveFound"])
+
+    def test_unsupported_platform(self):
+        self.patch(sys, "platform", "linux")
+        self.assertEqual(host.handle({"ping": True})["resultCode"], "unsupported_platform")
+
+    def test_version_matches_the_extension(self):
+        common_js = (HOST_DIR.parent / "common.js").read_text(encoding="utf-8")
+        self.assertIn(f"const REQUIRED_HOST_VERSION = {host.HOST_VERSION};", common_js)
+
+
 class MainTest(unittest.TestCase):
     def run_main(self, data):
         stdout = io.BytesIO()

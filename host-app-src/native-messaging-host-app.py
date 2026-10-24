@@ -1,8 +1,9 @@
 """Native messaging host for the Open Box Drive extension.
 
 Each message is a 4-byte little-endian length followed by UTF-8 JSON.
-Requests:  {"filePath": "<local path>"} or {"boxPath": ["All Files", "<folder>", ...]}
+Requests:  {"filePath": "<local path>"}, {"boxPath": ["All Files", "<folder>", ...]} or {"ping": true}
 Responses: {"resultCode": "<code>", "path": "<path>"}; each code has a result_<code> message in _locales.
+           ping answers {"resultCode": "pong", "version": HOST_VERSION, "path": <Box Drive folder>, "boxDriveFound": bool}.
 Keep this format compatible: installed hosts are only replaced when the user runs the setup again.
 """
 import json
@@ -11,6 +12,9 @@ import struct
 import subprocess
 import sys
 import time
+
+# Bump when the extension needs a newer host; must match REQUIRED_HOST_VERSION in common.js
+HOST_VERSION = 2
 
 # Box Drive folder under the home directory and the commands to show a folder / select a file
 PLATFORMS = {
@@ -58,17 +62,31 @@ def wait_for_path(path):
     return False
 
 
+def box_drive_root(platform):
+    return os.path.join(os.path.expanduser("~"), *platform["box_root"])
+
+
 def open_box_path(box_path):
     platform = current_platform()
     if platform is None:
         return {"path": "/".join(box_path), "resultCode": "unsupported_platform"}
     # box_path starts with the Box root folder ("All Files"), which is the Box Drive folder itself
-    path = os.path.join(os.path.expanduser("~"), *platform["box_root"], *box_path[1:])
+    path = os.path.join(box_drive_root(platform), *box_path[1:])
     wait_for_path(path)
     return open_path(path)
 
 
+def ping():
+    platform = current_platform()
+    if platform is None:
+        return {"path": "", "resultCode": "unsupported_platform", "version": HOST_VERSION}
+    root = box_drive_root(platform)
+    return {"path": root, "resultCode": "pong", "version": HOST_VERSION, "boxDriveFound": os.path.isdir(root)}
+
+
 def handle(request):
+    if request.get("ping"):
+        return ping()
     if "filePath" in request:
         return open_path(request["filePath"])
     if "boxPath" in request:

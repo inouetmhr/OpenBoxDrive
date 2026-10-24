@@ -13,27 +13,36 @@ const showNotification = info => {
 	});
 };
 
-// Notifies the result and also resolves with it, for pages that show it themselves
-const sendNativeRequest = message => new Promise(resolve => {
+// Bump together with HOST_VERSION in native-messaging-host-app.py when the extension needs a newer host
+const REQUIRED_HOST_VERSION = 2;
+
+// Resolves with the host's response, or { resultCode: 'native_host_error', path: <reason> } when it cannot be reached
+const requestNativeHost = message => new Promise(resolve => {
 	chrome.runtime.sendNativeMessage(applicationName, message, response => {
 		// lastError is set when the native host is not installed or exits abnormally; response is undefined then
 		const lastError = chrome.runtime.lastError;
-		const result = lastError
-			? { resultCode: 'native_host_error', path: lastError.message }
-			: response;
 		if (lastError) {
 			console.error(lastError.message);
-		} else {
-			console.info(response);
+			resolve({ resultCode: 'native_host_error', path: lastError.message });
+			return;
 		}
-		showNotification(result);
-		resolve(result);
+		console.info(response);
+		resolve(response);
 	});
 });
+
+// Notifies the result and also resolves with it, for callers that react to it
+const sendNativeRequest = async message => {
+	const result = await requestNativeHost(message);
+	showNotification(result);
+	return result;
+};
 
 export default {
 	applicationName,
 	description,
+	REQUIRED_HOST_VERSION,
 	showNotification,
+	requestNativeHost,
 	sendNativeRequest,
 };
