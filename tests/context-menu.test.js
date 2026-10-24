@@ -1,13 +1,7 @@
 import './helpers/chrome-stub.js';
-import { test, beforeEach } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { getContextMenuTitle } from '../context-menu.js';
-
-let stored;
-beforeEach(() => {
-	stored = {};
-	chrome.storage = { local: { get: async () => stored } };
-});
 
 test('menu titles name Finder on macOS', async () => {
 	globalThis.chromeStubOs = 'mac';
@@ -21,11 +15,6 @@ test('menu titles name Finder on macOS', async () => {
 test('menu titles name Explorer on Windows', async () => {
 	globalThis.chromeStubOs = 'win';
 	assert.equal((await getContextMenuTitle()).PAGE, 'context_menu_page_default_title(Explorer)');
-});
-
-test('titles saved by older versions still win', async () => {
-	stored = { 'contextMenus.title.SELECTION': 'My title' };
-	assert.equal((await getContextMenuTitle()).SELECTION, 'My title');
 });
 
 test('every default title message takes the file manager name as a placeholder', async () => {

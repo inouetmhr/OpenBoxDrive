@@ -25,7 +25,11 @@ const badge = (key, field) => async options => {
 	badges[options.tabId] = { ...badges[options.tabId], [key]: options[field] };
 };
 let storedFeedback;
-chrome.storage = { session: { set: async items => { storedFeedback = items.feedback; } } };
+let localStorageCleared = 0;
+chrome.storage = {
+	session: { set: async items => { storedFeedback = items.feedback; } },
+	local: { clear: async () => { localStorageCleared++; } },
+};
 chrome.tabs = { get: async tabId => ({ id: tabId, windowId: 7 }) };
 chrome.action = {
 	onClicked: event('action.onClicked'),
@@ -149,6 +153,7 @@ test('update: opens the setup page only when the installed helper is outdated', 
 	nativeReply = { response: { resultCode: 'bad_request', path: '' } };
 	await listeners.onInstalled({ reason: 'update' });
 	assert.equal(optionsPageOpened, 1);
+	assert.equal(localStorageCleared, 1, 'menu titles saved by older versions are removed');
 	nativeReply = { response: { resultCode: 'pong', version: 2, path: '/Box', boxDriveFound: true } };
 	await listeners.onInstalled({ reason: 'update' });
 	assert.equal(optionsPageOpened, 1);
