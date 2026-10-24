@@ -12,8 +12,26 @@ const showNotification = info => {
 	});
 };
 
+const sendNativeRequest = message => {
+	chrome.runtime.sendNativeMessage(applicationName, message, response => {
+		// lastError is set when the native host is not installed or exits abnormally; response is undefined then
+		const lastError = chrome.runtime.lastError;
+		if (lastError) {
+			console.error(lastError.message);
+			showNotification({
+				resultCode: 'native_host_error',
+				path: lastError.message,
+			});
+			return;
+		}
+		console.info(response);
+		showNotification(response);
+	});
+};
+
 export default {
 	applicationName,
 	description,
-	showNotification
+	showNotification,
+	sendNativeRequest,
 };

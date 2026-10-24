@@ -8,10 +8,13 @@ sed "s|___INSTDIR___|$DEST_DIR|" manifest-template.json > $EXTENTION.json
 
 BROWSER="___BROWSER___"  # Replace ___BROWSER___ with the desired browser name; for example: edge or chrome.
 if [ "$BROWSER" = "edge" ]; then
-    cp -f $EXTENTION.json "$HOME/Library/Application Support/Microsoft Edge/NativeMessagingHosts"
+    HOSTS_DIR="$HOME/Library/Application Support/Microsoft Edge/NativeMessagingHosts"
 else
-    cp -f $EXTENTION.json "$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts"
+    HOSTS_DIR="$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts"
 fi
+# The browser does not create this folder until some native host is installed
+mkdir -p "$HOSTS_DIR"
+cp -f $EXTENTION.json "$HOSTS_DIR"
 
 mkdir -p "$DEST_DIR"
 cp -f native-messaging-host-app.sh "$DEST_DIR"

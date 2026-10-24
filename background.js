@@ -7,15 +7,6 @@ import {
 	convertUrl2FilePath,
 } from './path-utils.js';
 
-// --- Helpers ---
-
-const sendNativeRequest = (message) => {
-	chrome.runtime.sendNativeMessage(common.applicationName, message, response => {
-		console.info(response);
-		common.showNotification(response);
-	});
-};
-
 // --- Setup declarativeContent Rule ---
 
 const setupDeclarativeContent = () => {
@@ -93,7 +84,7 @@ chrome.contextMenus.onClicked.addListener((info) => {
 		});
 		return;
 	}
-	sendNativeRequest({ filePath: extractResult.path });
+	common.sendNativeRequest({ filePath: extractResult.path });
 });
 
 chrome.action.onClicked.addListener(async (tab) => {
@@ -121,7 +112,7 @@ async function clickedAction(tab) {
 		return { result: "handled" };
 	}
 	if (isFileUrl(tab.url)) {
-		sendNativeRequest({ filePath: convertUrl2FilePath(tab.url) });
+		common.sendNativeRequest({ filePath: convertUrl2FilePath(tab.url) });
 		return { result: "handled" };
 	}
 	return { result: "unsupported" };
@@ -131,6 +122,6 @@ function openBoxDrive(result) {
 	const path = result?.[0]?.result;
 	console.info("Target path:", path);
 	if (path) {
-		sendNativeRequest({ boxPath: path });
+		common.sendNativeRequest({ boxPath: path });
 	}
 }

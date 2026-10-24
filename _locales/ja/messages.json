@@ -21,6 +21,9 @@
 	"result_directory_opened": {
 		"message": "フォルダを開きました"
 	},
+	"result_native_host_error": {
+		"message": "ローカルプロセスに接続できません。セットアップをやり直してください"
+	},
 	"result_file_opened": {
 		"message": "ファイルのあるフォルダを開きました"
 	},

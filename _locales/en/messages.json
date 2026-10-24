@@ -21,6 +21,9 @@
 	"result_directory_opened": {
 		"message": "The folder is opened."
 	},
+	"result_native_host_error": {
+		"message": "Cannot connect to the native host. Please run the setup again."
+	},
 	"result_file_opened": {
 		"message": "The folder is opened with the files."
 	},

@@ -121,7 +121,8 @@ Windows Registry Editor Version 5.00
 };
 
 {
-	const manifestJsonContent = generateManifestJson();
+	// For manual setup on Windows: the .bat is saved in the same folder as manifest.json
+	const manifestJsonContent = generateManifestJson('native-messaging-host-app.bat');
 	const manifestBlob = new Blob([manifestJsonContent], {type: 'text/plain',});
 	const manifestLink = document.getElementById('manifest-json-download-link');
 	manifestLink.href = URL.createObjectURL(manifestBlob);
@@ -180,10 +181,7 @@ Windows Registry Editor Version 5.00
 		const message = {
 			filePath,
 		};
-		chrome.runtime.sendNativeMessage(common.applicationName, message, response => {
-			console.info(response);
-			common.showNotification(response);
-		});
+		common.sendNativeRequest(message);
 	};
 	openButton.addEventListener('click', execOpen);
 	filePathToOpen.addEventListener('keydown', evt => {
