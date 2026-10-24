@@ -6,6 +6,7 @@ import {
 	isFileUrl,
 	extractFilePath,
 	convertUrl2FilePath,
+	stripSurroundingQuotes,
 } from '../path-utils.js';
 
 test('isBoxUrl', async t => {
@@ -25,6 +26,13 @@ test('isFileUrl', () => {
 	assert.ok(isFileUrl('file:///C:/ProgramData/'));
 	assert.ok(!isFileUrl('https://app.box.com/'));
 	assert.ok(!isFileUrl(undefined));
+});
+
+test('stripSurroundingQuotes', () => {
+	assert.equal(stripSurroundingQuotes('"C:\\a b"'), 'C:\\a b');
+	assert.equal(stripSurroundingQuotes('C:\\a'), 'C:\\a');
+	assert.equal(stripSurroundingQuotes('"C:\\a'), '"C:\\a');
+	assert.equal(stripSurroundingQuotes('"'), '"');
 });
 
 test('convertUrl2FilePath', async t => {

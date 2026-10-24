@@ -7,7 +7,7 @@ if "%BROWSER%"=="edge" (
     set "REG_BROWSER=Google\Chrome"
 )
 
-set "REGISTRY_KEY_PATH=Software\%REG_BROWSER%\NativeMessagingHosts\com.github.inouetmhr.open_box_drive"
+set "REGISTRY_KEY_PATH=Software\%REG_BROWSER%\NativeMessagingHosts\___APPLICATIONNAME___"
 set "DEST_DIR=%LOCALAPPDATA%\OpenBoxDrive\NativeHost"
 
 if not exist "%DEST_DIR%"   mkdir "%DEST_DIR%"

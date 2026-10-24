@@ -3,6 +3,14 @@ import { CONTEXT_MENU } from './context-menu.js';
 export const isBoxUrl = (url) => url && url.match(/(https:\/\/.*\.?app\.box\.com)/);
 export const isFileUrl = (url) => url && url.startsWith('file://');
 
+// Paths copied from Explorer ("Copy as path") are wrapped in double quotes
+export const stripSurroundingQuotes = text => {
+	if (text.length >= 2 && text.startsWith('"') && text.endsWith('"')) {
+		return text.slice(1, -1);
+	}
+	return text;
+};
+
 export class ExtractResult {
 	constructor(target, path) {
 		this.target = target;
@@ -30,10 +38,7 @@ export const extractFilePath = info => {
 	}
 	if (info.menuItemId === CONTEXT_MENU.SELECTION.id) {
 		const selectionText = info.selectionText;
-		if (selectionText.startsWith('"') && selectionText.endsWith('"')) {
-			return new ExtractResult(selectionText, selectionText.slice(1, -1));
-		}
-		return new ExtractResult(selectionText, selectionText);
+		return new ExtractResult(selectionText, stripSurroundingQuotes(selectionText));
 	}
 };
 

@@ -6,7 +6,7 @@ EXTENTION="___APPLICATIONNAME___"
 DEST_DIR="$HOME/Library/Application Support/OpenBoxDrive"
 sed "s|___INSTDIR___|$DEST_DIR|" manifest-template.json > $EXTENTION.json
 
-BROWSER="___BROWSER___"  # Replace ___BROWSER___ with the desired browser name; for example: edge or chrome.
+BROWSER="___BROWSER___"  # Filled in by the setup page: edge or chrome
 if [ "$BROWSER" = "edge" ]; then
     HOSTS_DIR="$HOME/Library/Application Support/Microsoft Edge/NativeMessagingHosts"
 else

@@ -1,5 +1,6 @@
 import common from '../common.js';
 import { zip } from './zip.mjs';
+import { stripSurroundingQuotes } from '../path-utils.js';
 
 {
 	const localeCode = chrome.i18n.getMessage('_locale_code');
@@ -70,7 +71,7 @@ async function generateSetupZip() {
 	];
 
 	const [nativeAppBuffer, nativePyBuffer, setupTemplate] = await Promise.all(filePromises);
-	const setupScript = setupTemplate.replace("___BROWSER___", browser).replace("___APPLICATIONNAME___", common.applicationName);
+	const setupScript = setupTemplate.replaceAll("___BROWSER___", browser).replaceAll("___APPLICATIONNAME___", common.applicationName);
 
 	const files = [
 		{name: nativeAppFileName, buffer: nativeAppBuffer},
@@ -106,10 +107,7 @@ const generateManifestJson = (nativeMessagingHostPath) => {
 	const filePathToOpen = document.getElementById('filePathToOpen');
 	const openButton = document.getElementById('test-open');
 	const execOpen = () => {
-		let filePath = String(filePathToOpen.value);
-		if (filePath.startsWith('"') && filePath.endsWith('"')) {
-			filePath = filePath.slice(1, -1);
-		}
+		const filePath = stripSurroundingQuotes(String(filePathToOpen.value));
 		const message = {
 			filePath,
 		};
