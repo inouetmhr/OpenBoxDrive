@@ -90,11 +90,15 @@ async function fetchFolderPath(origin, folderId) {
 	return names;
 }
 
+// reason is a key suffix of result_* in _locales, shown by background.js
+function boxDriveError(reason, message) {
+	return Object.assign(Error(message), { reason });
+}
+
 async function getBoxDrivePath() {
 	const page = parseBoxItemUrl(document.URL);
 	if (!page) {
-		alert("This page is not supported by Open Box Drive.");
-		throw Error("URL unmatch: unsupported page");
+		throw boxDriveError("unsupported_page", document.URL);
 	}
 
 	const item = await resolveBoxItem(document, page);
@@ -113,4 +117,14 @@ async function getBoxDrivePath() {
 	return path;
 }
 
-getBoxDrivePath();
+// The value of the last expression is passed back to executeScript, so it must be serializable
+async function runBoxDrivePath() {
+	try {
+		return { ok: true, path: await getBoxDrivePath() };
+	} catch (e) {
+		console.error(e);
+		return { ok: false, reason: e.reason ?? "box_lookup_failed", detail: e.message };
+	}
+}
+
+runBoxDrivePath();

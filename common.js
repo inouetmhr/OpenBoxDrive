@@ -1,13 +1,14 @@
 const description = 'Open Box Drive';
 const applicationName = `com.github.inouetmhr.${description.toLowerCase().replace(/ /g, '_')}`
-const extensionName = chrome.runtime.getManifest().name;
+// getManifest().name is the raw "__MSG_extension_name__" placeholder, so read the localized name instead
+const extensionName = chrome.i18n.getMessage('extension_name');
 
 const showNotification = info => {
 	chrome.notifications.create({
 		type: 'basic',
 		iconUrl: '/icons/icon128.png',
-		title: chrome.i18n.getMessage(`result_${info.resultCode}`) || info.resultMessage, // "resultMessage" is for compatibility before i18n support
-		message: info.path,
+		title: chrome.i18n.getMessage(`result_${info.resultCode}`) || extensionName,
+		message: info.path ?? '',
 		contextMessage: extensionName,
 	});
 };

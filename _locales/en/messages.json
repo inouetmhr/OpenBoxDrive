@@ -12,8 +12,14 @@
 	"setup_page_title": {
 		"message": "Setup"
 	},
-	"not_a_file_path": {
+	"result_not_a_file_path": {
 		"message": "Not a file path"
+	},
+	"result_unsupported_page": {
+		"message": "Works only on Box folder/file pages or file:// URLs."
+	},
+	"result_box_lookup_failed": {
+		"message": "Could not find the folder of this Box page."
 	},
 	"result_does_not_exist": {
 		"message": "The file/folder does not exist."

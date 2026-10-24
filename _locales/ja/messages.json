@@ -12,8 +12,14 @@
 	"setup_page_title": {
 		"message": "設定"
 	},
-	"not_a_file_path": {
+	"result_not_a_file_path": {
 		"message": "ファイルパスではありません"
+	},
+	"result_unsupported_page": {
+		"message": "Boxのフォルダ・ファイルのページか file:// のURLでのみ動作します"
+	},
+	"result_box_lookup_failed": {
+		"message": "このBoxページのフォルダを特定できませんでした"
 	},
 	"result_does_not_exist": {
 		"message": "ファイル/フォルダが存在しません"

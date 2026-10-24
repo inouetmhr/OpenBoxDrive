@@ -73,7 +73,7 @@ chrome.contextMenus.onClicked.addListener((info) => {
 	const extractResult = extractFilePath(info);
 	if (!extractResult.isSucceeded) {
 		common.showNotification({
-			resultMessage: chrome.i18n.getMessage('not_a_file_path'),
+			resultCode: 'not_a_file_path',
 			path: extractResult.target,
 		});
 		return;
@@ -86,8 +86,8 @@ chrome.action.onClicked.addListener(async (tab) => {
 	const result = await clickedAction(tab);
 	if (result.result === "unsupported") {
 		common.showNotification({
-			resultMessage: '',
-			path: 'This extension works only with box pages or file:// urls.'
+			resultCode: 'unsupported_page',
+			path: tab.url,
 		});
 	}
 });
@@ -99,10 +99,19 @@ async function clickedAction(tab) {
 	console.info("onclick message on tab: " + tab.url);
 
 	if (isBoxUrl(tab.url)) {
-		await chrome.scripting.executeScript({
-			target: { tabId: tab.id },
-			files: ["box-injection.js"]
-		}, openBoxDrive);
+		let injection;
+		try {
+			[injection] = await chrome.scripting.executeScript({
+				target: { tabId: tab.id },
+				files: ["box-injection.js"]
+			});
+		} catch (e) {
+			// e.g. the tab navigated away or the page cannot be scripted
+			console.error(e);
+			common.showNotification({ resultCode: 'box_lookup_failed', path: e.message });
+			return { result: "handled" };
+		}
+		openBoxDrive(injection?.result);
 		return { result: "handled" };
 	}
 	if (isFileUrl(tab.url)) {
@@ -112,10 +121,15 @@ async function clickedAction(tab) {
 	return { result: "unsupported" };
 }
 
+// result is what box-injection.js returns: { ok: true, path } or { ok: false, reason, detail }
 function openBoxDrive(result) {
-	const path = result?.[0]?.result;
-	console.info("Target path:", path);
-	if (path) {
-		common.sendNativeRequest({ boxPath: path });
+	console.info("Box lookup result:", result);
+	if (result?.ok) {
+		common.sendNativeRequest({ boxPath: result.path });
+		return;
 	}
+	common.showNotification({
+		resultCode: result?.reason ?? 'box_lookup_failed',
+		path: result?.detail ?? '',
+	});
 }

@@ -18,11 +18,10 @@ const folderApi = (...names) => ({
  * @param {object} [page.elements] selector -> element returned by document.querySelector
  * @param {object} [page.responses] url -> fetch response
  * @param {object} [page.parsedDocs] html text -> elements map for DOMParser results
- * @returns {{ result: Promise<string[]>, fetched: string[], alerts: string[], context: object }}
+ * @returns {{ result: Promise<object>, fetched: string[], context: object }}
  */
 const runInjection = ({ url, elements = {}, responses = {}, parsedDocs = {} }) => {
 	const fetched = [];
-	const alerts = [];
 	const fakeDoc = map => ({ querySelector: sel => map[sel] ?? null });
 	const context = vm.createContext({
 		document: { URL: url, ...fakeDoc(elements) },
@@ -36,11 +35,23 @@ const runInjection = ({ url, elements = {}, responses = {}, parsedDocs = {} }) =
 				return fakeDoc(parsedDocs[text] ?? {});
 			}
 		},
-		alert: message => alerts.push(message),
-		console: { log: () => {} },
+		// no alert(): failures are reported to background.js through the returned value
+		console: { log: () => {}, error: () => {} },
 	});
 	const result = vm.runInContext(source, context);
-	return { result, fetched, alerts, context };
+	return { result, fetched, context };
+};
+
+const pathOf = async result => {
+	const value = await result;
+	assert.equal(value.ok, true, `lookup failed: ${value.reason} ${value.detail}`);
+	return [...value.path];
+};
+
+const failureOf = async result => {
+	const value = await result;
+	assert.equal(value.ok, false);
+	return { ...value };
 };
 
 test('folder page resolves path from folder API', async () => {
@@ -50,7 +61,7 @@ test('folder page resolves path from folder API', async () => {
 			[`${BASE}/app-api/enduserapp/folder/111`]: folderApi('All Files', 'Team', 'Docs'),
 		},
 	});
-	assert.deepEqual([...await result], ['All Files', 'Team', 'Docs']);
+	assert.deepEqual(await pathOf(result), ['All Files', 'Team', 'Docs']);
 	assert.deepEqual(fetched, [`${BASE}/app-api/enduserapp/folder/111`]);
 });
 
@@ -65,7 +76,7 @@ test('file page appends file name to parent folder path', async () => {
 			[`${BASE}/app-api/enduserapp/folder/222`]: folderApi('All Files', 'Team'),
 		},
 	});
-	assert.deepEqual([...await result], ['All Files', 'Team', 'report.xlsx']);
+	assert.deepEqual(await pathOf(result), ['All Files', 'Team', 'report.xlsx']);
 });
 
 test('file page falls back to preview header title', async () => {
@@ -79,7 +90,7 @@ test('file page falls back to preview header title', async () => {
 			[`${BASE}/app-api/enduserapp/folder/222`]: folderApi('All Files'),
 		},
 	});
-	assert.deepEqual([...await result], ['All Files', 'memo.pdf']);
+	assert.deepEqual(await pathOf(result), ['All Files', 'memo.pdf']);
 });
 
 test('integrations url is supported', async () => {
@@ -89,7 +100,7 @@ test('integrations url is supported', async () => {
 			[`${BASE}/app-api/enduserapp/folder/333`]: folderApi('All Files', 'X'),
 		},
 	});
-	assert.deepEqual([...await result], ['All Files', 'X']);
+	assert.deepEqual(await pathOf(result), ['All Files', 'X']);
 });
 
 test('officeonline page reads parent folder from embedded JSON on file page', async () => {
@@ -104,7 +115,7 @@ test('officeonline page reads parent folder from embedded JSON on file page', as
 			FILE_PAGE_HTML: { 'script:last-of-type': { innerHTML: embedded } },
 		},
 	});
-	assert.deepEqual([...await result], ['All Files', 'Y', 'plan.docx']);
+	assert.deepEqual(await pathOf(result), ['All Files', 'Y', 'plan.docx']);
 });
 
 test('canvas page uses board parent link and title', async () => {
@@ -118,19 +129,32 @@ test('canvas page uses board parent link and title', async () => {
 			[`${BASE}/app-api/enduserapp/folder/777`]: folderApi('All Files'),
 		},
 	});
-	assert.deepEqual([...await result], ['All Files', 'Brainstorm.boxcanvas']);
+	assert.deepEqual(await pathOf(result), ['All Files', 'Brainstorm.boxcanvas']);
 });
 
-test('unsupported page alerts and rejects', async () => {
-	const { result, alerts, fetched } = runInjection({ url: `${BASE}/recents` });
-	await assert.rejects(result, /unsupported page/);
-	assert.equal(alerts.length, 1);
+test('unsupported page returns unsupported_page with the url', async () => {
+	const { result, fetched } = runInjection({ url: `${BASE}/recents` });
+	assert.deepEqual(await failureOf(result), { ok: false, reason: 'unsupported_page', detail: `${BASE}/recents` });
 	assert.deepEqual(fetched, []);
 });
 
-test('file page without parent folder link rejects', async () => {
+test('file page without parent folder link returns box_lookup_failed', async () => {
 	const { result } = runInjection({ url: `${BASE}/file/999` });
-	await assert.rejects(result, /Failed to resolve folder id for type=file/);
+	const failure = await failureOf(result);
+	assert.equal(failure.reason, 'box_lookup_failed');
+	assert.match(failure.detail, /Failed to resolve folder id for type=file/);
+});
+
+test('unexpected folder API response returns box_lookup_failed', async () => {
+	const { result } = runInjection({
+		url: `${BASE}/folder/111`,
+		responses: {
+			[`${BASE}/app-api/enduserapp/folder/111`]: { json: async () => ({ error: 'forbidden' }) },
+		},
+	});
+	const failure = await failureOf(result);
+	assert.equal(failure.reason, 'box_lookup_failed');
+	assert.match(failure.detail, /Unexpected folder API response shape/);
 });
 
 test('falls back to the older preview header selector', async () => {
@@ -144,13 +168,12 @@ test('falls back to the older preview header selector', async () => {
 			[`${BASE}/app-api/enduserapp/folder/222`]: folderApi('All Files'),
 		},
 	});
-	assert.deepEqual([...await result], ['All Files', 'old.pdf']);
+	assert.deepEqual(await pathOf(result), ['All Files', 'old.pdf']);
 });
 
 test('box url in a query string of another site is not supported', async () => {
-	const { result, alerts } = runInjection({ url: `https://example.com/?next=${BASE}/folder/1` });
-	await assert.rejects(result, /unsupported page/);
-	assert.equal(alerts.length, 1);
+	const { result } = runInjection({ url: `https://example.com/?next=${BASE}/folder/1` });
+	assert.equal((await failureOf(result)).reason, 'unsupported_page');
 });
 
 test('can be injected again into the same page', async () => {
@@ -161,14 +184,14 @@ test('can be injected again into the same page', async () => {
 		},
 	};
 	const { result, context } = runInjection(page);
-	await result;
+	await pathOf(result);
 	const again = vm.runInContext(source, context);
-	assert.deepEqual([...await again], ['All Files']);
+	assert.deepEqual(await pathOf(again), ['All Files']);
 });
 
 test('parseBoxItemUrl', async t => {
 	const { context, result } = runInjection({ url: `${BASE}/recents` });
-	await assert.rejects(result);
+	await result;
 	const parse = url => {
 		const parsed = context.parseBoxItemUrl(url);
 		return parsed && { ...parsed };
@@ -187,7 +210,7 @@ test('parseBoxItemUrl', async t => {
 
 test('parseEmbeddedItem', async t => {
 	const { context, result } = runInjection({ url: `${BASE}/recents` });
-	await assert.rejects(result);
+	await result;
 	await t.test('reads parent folder and name of the first item', () => {
 		const item = context.parseEmbeddedItem('x = {"k":{"items":[{"parentFolderID":"1","name":"a.boxnote"}]}};');
 		assert.deepEqual({ ...item }, { folderId: '1', name: 'a.boxnote' });
