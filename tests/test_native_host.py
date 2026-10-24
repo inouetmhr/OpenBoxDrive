@@ -10,7 +10,9 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-HOST_PATH = Path(__file__).resolve().parent.parent / "host-app-src" / "native-messaging-host-app.py"
+HOST_DIR = Path(__file__).resolve().parent.parent / "host-app-src"
+HOST_PATH = HOST_DIR / "native-messaging-host-app.py"
+LOCALES_DIR = Path(__file__).resolve().parent.parent / "_locales"
 
 spec = importlib.util.spec_from_file_location("native_host", HOST_PATH)
 host = importlib.util.module_from_spec(spec)
@@ -27,113 +29,180 @@ def unframe(data):
     return json.loads(data[4:4 + length].decode("utf-8"))
 
 
-class SendTest(unittest.TestCase):
-    def test_writes_length_prefixed_utf8_json(self):
-        stdout = mock.Mock(buffer=io.BytesIO())
-        with mock.patch.object(sys, "stdout", stdout):
-            host.send({"path": "あ", "resultCode": "file_opened"})
-        self.assertEqual(unframe(stdout.buffer.getvalue()), {"path": "あ", "resultCode": "file_opened"})
-
-
-class OpenByShellTest(unittest.TestCase):
+class TempDirTestCase(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.tmp.cleanup)
-        self.dir = self.tmp.name
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.dir = tmp.name
+        self.popen = self.patch(host.subprocess, "Popen")
+
+    def patch(self, target, attribute, *args, **kwargs):
+        patcher = mock.patch.object(target, attribute, *args, **kwargs)
+        self.addCleanup(patcher.stop)
+        return patcher.start()
+
+
+class OpenPathTest(TempDirTestCase):
+    def setUp(self):
+        super().setUp()
         self.file = os.path.join(self.dir, "a.txt")
         Path(self.file).write_text("x")
-        self.sent = []
-        patcher = mock.patch.object(host, "send", self.sent.append)
-        patcher.start()
-        self.addCleanup(patcher.stop)
 
     def test_directory_on_mac(self):
-        with mock.patch.object(sys, "platform", "darwin"), mock.patch.object(host.subprocess, "run") as run:
-            host.open_by_shell(self.dir + os.sep)
-        run.assert_called_once_with(["open", self.dir])
-        self.assertEqual(self.sent, [{"path": self.dir, "resultCode": "directory_opened"}])
+        self.patch(sys, "platform", "darwin")
+        result = host.open_path(self.dir + os.sep)
+        self.popen.assert_called_once_with(["open", self.dir])
+        self.assertEqual(result, {"path": self.dir, "resultCode": "directory_opened"})
 
     def test_directory_on_windows(self):
-        with mock.patch.object(sys, "platform", "win32"), mock.patch.object(host.subprocess, "run") as run:
-            host.open_by_shell(self.dir)
-        run.assert_called_once_with(["explorer", self.dir])
+        self.patch(sys, "platform", "win32")
+        host.open_path(self.dir)
+        self.popen.assert_called_once_with(["explorer", self.dir])
 
     def test_file_on_mac_reveals_in_finder(self):
-        with mock.patch.object(sys, "platform", "darwin"), mock.patch.object(host.subprocess, "run") as run:
-            host.open_by_shell(self.file)
-        run.assert_called_once_with(["open", "-R", self.file])
-        self.assertEqual(self.sent, [{"path": self.file, "resultCode": "file_opened"}])
+        self.patch(sys, "platform", "darwin")
+        result = host.open_path(self.file)
+        self.popen.assert_called_once_with(["open", "-R", self.file])
+        self.assertEqual(result, {"path": self.file, "resultCode": "file_opened"})
 
     def test_file_on_windows_selects_in_explorer(self):
-        with mock.patch.object(sys, "platform", "win32"), mock.patch.object(host.subprocess, "Popen") as popen:
-            host.open_by_shell(self.file)
-        popen.assert_called_once_with(["explorer", "/select,", self.file])
+        self.patch(sys, "platform", "win32")
+        host.open_path(self.file)
+        self.popen.assert_called_once_with(["explorer", "/select,", self.file])
 
     def test_missing_path(self):
         missing = os.path.join(self.dir, "missing")
-        with mock.patch.object(host.subprocess, "run") as run:
-            host.open_by_shell(missing)
-        run.assert_not_called()
-        self.assertEqual(len(self.sent), 1)
-        self.assertEqual(self.sent[0]["resultCode"], "does_not_exist")
-        self.assertEqual(self.sent[0]["path"], missing)
+        result = host.open_path(missing)
+        self.popen.assert_not_called()
+        self.assertEqual(result, {"path": missing, "resultCode": "does_not_exist"})
+
+    def test_unsupported_platform_opens_nothing(self):
+        self.patch(sys, "platform", "linux")
+        result = host.open_path(self.dir)
+        self.popen.assert_not_called()
+        self.assertEqual(result["resultCode"], "unsupported_platform")
 
 
-class OpenInBoxDriveTest(unittest.TestCase):
+class OpenBoxPathTest(TempDirTestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.tmp.cleanup)
-        self.home = self.tmp.name
-        self.opened = []
-        for patcher in (
-            mock.patch.object(host.os.path, "expanduser", return_value=self.home),
-            mock.patch.object(host, "open_by_shell", self.opened.append),
-            mock.patch.object(host.time, "sleep"),
-        ):
-            self.sleep = patcher.start()
-            self.addCleanup(patcher.stop)
+        super().setUp()
+        self.patch(host.os.path, "expanduser", return_value=self.dir)
+        self.sleep = self.patch(host.time, "sleep")
 
     def test_mac_path_skips_root_folder(self):
-        target = Path(self.home, "Library", "CloudStorage", "Box-Box", "Team", "Docs")
+        self.patch(sys, "platform", "darwin")
+        target = Path(self.dir, "Library", "CloudStorage", "Box-Box", "Team", "Docs")
         target.mkdir(parents=True)
-        with mock.patch.object(sys, "platform", "darwin"):
-            host.open_in_box_drive(["All Files", "Team", "Docs"])
-        self.assertEqual(self.opened, [str(target)])
+        result = host.open_box_path(["All Files", "Team", "Docs"])
+        self.assertEqual(result, {"path": str(target), "resultCode": "directory_opened"})
         self.sleep.assert_not_called()
 
     def test_windows_path(self):
-        target = Path(self.home, "Box", "Team")
+        self.patch(sys, "platform", "win32")
+        target = Path(self.dir, "Box", "Team")
         target.mkdir(parents=True)
-        with mock.patch.object(sys, "platform", "win32"):
-            host.open_in_box_drive(["All Files", "Team"])
-        self.assertEqual(self.opened, [str(target)])
+        result = host.open_box_path(["All Files", "Team"])
+        self.assertEqual(result["path"], str(target))
+
+    def test_root_folder_opens_box_drive_itself(self):
+        self.patch(sys, "platform", "win32")
+        Path(self.dir, "Box").mkdir()
+        result = host.open_box_path(["All Files"])
+        self.assertEqual(result["path"], os.path.join(self.dir, "Box"))
 
     def test_retries_until_sync_then_gives_up(self):
-        with mock.patch.object(sys, "platform", "win32"):
-            host.open_in_box_drive(["All Files", "NotSynced"])
-        self.assertEqual(self.sleep.call_count, 9)
-        self.assertEqual(self.opened, [os.path.join(self.home, "Box", "NotSynced")])
+        self.patch(sys, "platform", "win32")
+        result = host.open_box_path(["All Files", "NotSynced"])
+        self.assertEqual(self.sleep.call_count, host.WAIT_ATTEMPTS - 1)
+        self.assertEqual(result, {"path": os.path.join(self.dir, "Box", "NotSynced"), "resultCode": "does_not_exist"})
+
+    def test_empty_path_does_not_crash(self):
+        self.patch(sys, "platform", "win32")
+        result = host.open_box_path([])
+        self.assertEqual(result["path"], os.path.join(self.dir, "Box"))
+
+    def test_unsupported_platform(self):
+        self.patch(sys, "platform", "linux")
+        result = host.open_box_path(["All Files", "Team"])
+        self.assertEqual(result["resultCode"], "unsupported_platform")
+        self.sleep.assert_not_called()
+
+
+class MainTest(unittest.TestCase):
+    def run_main(self, data):
+        stdout = io.BytesIO()
+        code = host.main(io.BytesIO(data), stdout)
+        return code, stdout.getvalue()
+
+    def test_dispatches_request_and_writes_framed_response(self):
+        with mock.patch.object(host, "open_path", return_value={"path": "あ", "resultCode": "file_opened"}) as open_path:
+            code, out = self.run_main(frame({"filePath": "あ"}))
+        open_path.assert_called_once_with("あ")
+        self.assertEqual(code, 0)
+        self.assertEqual(unframe(out), {"path": "あ", "resultCode": "file_opened"})
+
+    def test_unknown_request(self):
+        code, out = self.run_main(frame({"something": 1}))
+        self.assertEqual(code, 0)
+        self.assertEqual(unframe(out)["resultCode"], "bad_request")
+
+    def test_empty_input(self):
+        self.assertEqual(self.run_main(b""), (1, b""))
+
+    def test_malformed_json(self):
+        body = b"{not json"
+        self.assertEqual(self.run_main(struct.pack("<I", len(body)) + body), (1, b""))
+
+    def test_empty_box_path_opens_box_drive_root(self):
+        with mock.patch.object(host, "open_box_path", return_value={"path": "", "resultCode": "does_not_exist"}) as open_box_path:
+            code, _ = self.run_main(frame({"boxPath": []}))
+        open_box_path.assert_called_once_with([])
+        self.assertEqual(code, 0)
+
+    def test_truncated_body(self):
+        self.assertEqual(self.run_main(struct.pack("<I", 100) + b"{}"), (1, b""))
+
+
+class ResultCodeMessagesTest(unittest.TestCase):
+    def test_every_result_code_has_a_message(self):
+        codes = {"directory_opened", "file_opened", "does_not_exist", "unsupported_platform", "bad_request"}
+        source = HOST_PATH.read_text(encoding="utf-8")
+        for code in codes:
+            self.assertIn(f'"{code}"', source)
+        for locale in ("en", "ja"):
+            messages = json.loads((LOCALES_DIR / locale / "messages.json").read_text(encoding="utf-8"))
+            for code in codes:
+                self.assertIn(f"result_{code}", messages, f"{locale}: result_{code}")
+
+
+@unittest.skipUnless(sys.platform == "darwin", "the shell launcher runs /usr/bin/python3 on macOS")
+class LauncherTest(unittest.TestCase):
+    def test_shell_launcher_works_from_another_directory(self):
+        missing = os.path.join(tempfile.gettempdir(), "open-box-drive-test-missing-path")
+        with tempfile.TemporaryDirectory() as cwd:
+            proc = subprocess.run(
+                ["/bin/bash", str(HOST_DIR / "native-messaging-host-app.sh")],
+                input=frame({"filePath": missing}),
+                capture_output=True,
+                cwd=cwd,
+                timeout=10,
+                check=True,
+                env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
+            )
+        self.assertEqual(unframe(proc.stdout), {"path": missing, "resultCode": "does_not_exist"})
 
 
 class StdioProtocolTest(unittest.TestCase):
     def test_round_trip_for_missing_file(self):
         missing = os.path.join(tempfile.gettempdir(), "open-box-drive-test-missing-path")
         proc = subprocess.run(
-            [sys.executable, str(HOST_PATH)],
+            [sys.executable, "-B", str(HOST_PATH)],
             input=frame({"filePath": missing}),
             capture_output=True,
             timeout=10,
             check=True,
         )
-        response = unframe(proc.stdout)
-        self.assertEqual(response["resultCode"], "does_not_exist")
-        self.assertEqual(response["path"], missing)
-
-    def test_truncated_body_exits_with_error(self):
-        data = struct.pack("<I", 100) + b"{}"
-        proc = subprocess.run([sys.executable, str(HOST_PATH)], input=data, capture_output=True, timeout=10)
-        self.assertEqual(proc.returncode, 1)
-        self.assertEqual(proc.stdout, b"")
+        self.assertEqual(unframe(proc.stdout), {"path": missing, "resultCode": "does_not_exist"})
 
 
 if __name__ == "__main__":

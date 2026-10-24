@@ -21,6 +21,12 @@
 	"result_box_lookup_failed": {
 		"message": "Could not find the folder of this Box page."
 	},
+	"result_unsupported_platform": {
+		"message": "This OS is not supported by Box Drive integration."
+	},
+	"result_bad_request": {
+		"message": "The native host received an unknown request."
+	},
 	"result_does_not_exist": {
 		"message": "The file/folder does not exist."
 	},

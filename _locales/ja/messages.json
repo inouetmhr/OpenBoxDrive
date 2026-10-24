@@ -21,6 +21,12 @@
 	"result_box_lookup_failed": {
 		"message": "このBoxページのフォルダを特定できませんでした"
 	},
+	"result_unsupported_platform": {
+		"message": "このOSには対応していません"
+	},
+	"result_bad_request": {
+		"message": "ローカルプロセスが不明な要求を受け取りました"
+	},
 	"result_does_not_exist": {
 		"message": "ファイル/フォルダが存在しません"
 	},

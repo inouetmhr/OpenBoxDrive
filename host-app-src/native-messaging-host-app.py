@@ -1,89 +1,110 @@
-import sys
-import os
+"""Native messaging host for the Open Box Drive extension.
+
+Each message is a 4-byte little-endian length followed by UTF-8 JSON.
+Requests:  {"filePath": "<local path>"} or {"boxPath": ["All Files", "<folder>", ...]}
+Responses: {"resultCode": "<code>", "path": "<path>"}; each code has a result_<code> message in _locales.
+Keep this format compatible: installed hosts are only replaced when the user runs the setup again.
+"""
 import json
-import subprocess
+import os
 import struct
+import subprocess
+import sys
 import time
 
+# Box Drive folder under the home directory and the commands to show a folder / select a file
+PLATFORMS = {
+    "darwin": {
+        "box_root": ("Library", "CloudStorage", "Box-Box"),
+        "open_dir": lambda path: ["open", path],
+        "reveal_file": lambda path: ["open", "-R", path],
+    },
+    "win32": {
+        "box_root": ("Box",),
+        "open_dir": lambda path: ["explorer", path],
+        "reveal_file": lambda path: ["explorer", "/select,", path],
+    },
+}
+
+# Box Drive may not have synced a newly created item yet
+WAIT_ATTEMPTS = 10
+WAIT_INTERVAL_SECONDS = 0.5
 
 
-def open_by_shell(path):
+def current_platform():
+    return PLATFORMS.get(sys.platform)
+
+
+def open_path(path):
     path = path.rstrip(os.sep)
+    platform = current_platform()
+    if platform is None:
+        return {"path": path, "resultCode": "unsupported_platform"}
+    if os.path.isdir(path):
+        subprocess.Popen(platform["open_dir"](path))
+        return {"path": path, "resultCode": "directory_opened"}
+    if os.path.exists(path):
+        subprocess.Popen(platform["reveal_file"](path))
+        return {"path": path, "resultCode": "file_opened"}
+    return {"path": path, "resultCode": "does_not_exist"}
+
+
+def wait_for_path(path):
+    for attempt in range(WAIT_ATTEMPTS):
+        if os.path.exists(path):
+            return True
+        if attempt < WAIT_ATTEMPTS - 1:
+            time.sleep(WAIT_INTERVAL_SECONDS)
+    return False
+
+
+def open_box_path(box_path):
+    platform = current_platform()
+    if platform is None:
+        return {"path": "/".join(box_path), "resultCode": "unsupported_platform"}
+    # box_path starts with the Box root folder ("All Files"), which is the Box Drive folder itself
+    path = os.path.join(os.path.expanduser("~"), *platform["box_root"], *box_path[1:])
+    wait_for_path(path)
+    return open_path(path)
+
+
+def handle(request):
+    if "filePath" in request:
+        return open_path(request["filePath"])
+    if "boxPath" in request:
+        return open_box_path(request["boxPath"])
+    return {"path": "", "resultCode": "bad_request"}
+
+
+def read_message(stdin):
+    header = stdin.read(4)
+    if len(header) != 4:
+        return None
+    (length,) = struct.unpack("<I", header)
+    body = stdin.read(length)
+    if len(body) != length:
+        return None
     try:
-        stats = os.stat(path)
-        if stats.st_mode & 0o40000:  # directory
-            if sys.platform == "win32":
-                subprocess.run(["explorer", path])
-            elif sys.platform == "darwin":  # MacOS
-                subprocess.run(["open", path])
-            send({
-                'path': path,
-                'resultCode': 'directory_opened'
-            })
-        else:  # file
-            if sys.platform == "win32":
-                subprocess.Popen(["explorer", "/select,", path])
-            elif sys.platform == "darwin":  # MacOS
-                subprocess.run(["open", "-R", path])
-            send({
-                'path': path,
-                'resultCode': 'file_opened'
-            })
-    except FileNotFoundError as e:
-        send({
-            'path': path,
-            'resultCode': 'does_not_exist',
-            'err': str(e)
-        })
-
-def open_in_box_drive(elements):
-    home = os.path.expanduser("~")
-    if sys.platform == "darwin": # MacOS
-        path = os.path.join(home, "Library", "CloudStorage", "Box-Box", *elements[1:])
-    else:
-        path = os.path.join(home, 'Box', *elements[1:])
-        
-    # Retry mechanism for Box Drive synchronization delay
-    max_retries = 10
-    retry_interval = 0.5
-    for attempt in range(max_retries):
-        try:
-            stats = os.stat(path)
-            break # File found, break out of retry loop
-        except FileNotFoundError:
-            if attempt < max_retries - 1:
-                time.sleep(retry_interval)
-            
-    open_by_shell(path)
-
-def send(message_object):
-    message = json.dumps(message_object)
-    message_buffer = message.encode('utf-8')
-    length = len(message_buffer)
-    length_buffer = struct.pack('<I', length)
-
-    sys.stdout.buffer.write(length_buffer)
-    sys.stdout.buffer.write(message_buffer)
-    sys.stdout.buffer.flush()
+        request = json.loads(body.decode("utf-8"))
+    except ValueError:
+        return None
+    return request if isinstance(request, dict) else None
 
 
-length_bytes = 4
+def write_message(stdout, message):
+    body = json.dumps(message).encode("utf-8")
+    stdout.write(struct.pack("<I", len(body)))
+    stdout.write(body)
+    stdout.flush()
+
+
+def main(stdin, stdout):
+    request = read_message(stdin)
+    if request is None:
+        return 1
+    write_message(stdout, handle(request))
+    return 0
+
+
 if __name__ == "__main__":
-    length_buffer = sys.stdin.buffer.read(length_bytes)
-    body_length = struct.unpack('<I', length_buffer)[0]
-    #body_length = int.from_bytes(length_buffer, byteorder='little')
-    #logger.debug(body_length)
-    body_buffer = sys.stdin.buffer.read(body_length)
-    #logger.debug(body_buffer)
-
-    if len(body_buffer) != body_length:
-        sys.exit(1)
-    
-    input_data = json.loads(body_buffer.decode('utf-8'))
-    #logger.info(input_data)
-
-    if 'filePath' in input_data:
-        open_by_shell(input_data['filePath'])
-    elif 'boxPath' in input_data:
-        open_in_box_drive(input_data['boxPath'])
-
+    sys.exit(main(sys.stdin.buffer, sys.stdout.buffer))
