@@ -12,11 +12,8 @@
 	"setup_page_title": {
 		"message": "Setup"
 	},
-	"result_not_a_file_path": {
-		"message": "Not a file path"
-	},
 	"result_unsupported_page": {
-		"message": "Works only on Box folder/file pages or file:// URLs."
+		"message": "Works only on Box folder and file pages."
 	},
 	"result_box_lookup_failed": {
 		"message": "Could not find the folder of this Box page."
@@ -38,32 +35,5 @@
 	},
 	"result_file_opened": {
 		"message": "The folder is opened with the files."
-	},
-	"context_menu_page_default_title": {
-		"message": "Open folder in $SHELL$",
-		"placeholders": {
-			"shell": {
-				"content": "$1",
-				"example": "Explorer"
-			}
-		}
-	},
-	"context_menu_link_default_title": {
-		"message": "Open the link destination in $SHELL$ (for local files)",
-		"placeholders": {
-			"shell": {
-				"content": "$1",
-				"example": "Explorer"
-			}
-		}
-	},
-	"context_menu_selection_default_title": {
-		"message": "Open the selected string in $SHELL$ (for local file path)",
-		"placeholders": {
-			"shell": {
-				"content": "$1",
-				"example": "Explorer"
-			}
-		}
 	}
 }

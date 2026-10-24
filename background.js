@@ -1,11 +1,5 @@
 import common from './common.js';
-import { createContextMenu } from './context-menu.js';
-import {
-	isBoxUrl,
-	isFileUrl,
-	extractFilePath,
-	convertUrl2FilePath,
-} from './path-utils.js';
+import { isBoxUrl } from './path-utils.js';
 import { diagnoseHost } from './setup/status.js';
 import { showBusy, clearFeedback, showError } from './feedback.js';
 
@@ -53,9 +47,6 @@ const setupDeclarativeContent = () => {
 					new chrome.declarativeContent.PageStateMatcher({
 						pageUrl: { hostSuffix: 'app.box.com' },
 					}),
-					new chrome.declarativeContent.PageStateMatcher({
-						pageUrl: { schemes: ['file'] },
-					})
 				],
 				actions: [
 					new chrome.declarativeContent.SetIcon({
@@ -92,20 +83,7 @@ chrome.runtime.onInstalled.addListener(async details => {
 	}
 });
 
-chrome.runtime.onInstalled.addListener(createContextMenu);
-chrome.runtime.onStartup.addListener(createContextMenu);
-
 // --- User Actions ---
-
-chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-	const { os } = await chrome.runtime.getPlatformInfo();
-	const extractResult = extractFilePath(info, os);
-	if (!extractResult.isSucceeded) {
-		showError(tab?.id, 'not_a_file_path', extractResult.target);
-		return;
-	}
-	sendToHost(tab?.id, { filePath: extractResult.path });
-});
 
 chrome.action.onClicked.addListener(async (tab) => {
 	console.info("onClicked on: " + tab.url);
@@ -137,11 +115,6 @@ async function clickedAction(tab) {
 			return { result: "handled" };
 		}
 		openBoxDrive(tab.id, injection?.result);
-		return { result: "handled" };
-	}
-	if (isFileUrl(tab.url)) {
-		const { os } = await chrome.runtime.getPlatformInfo();
-		sendToHost(tab.id, { filePath: convertUrl2FilePath(tab.url, os) });
 		return { result: "handled" };
 	}
 	return { result: "unsupported" };

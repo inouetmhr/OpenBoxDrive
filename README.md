@@ -9,7 +9,6 @@ Opens the folder or file you are viewing on the Box website in Box Drive, using 
 - On a file page, the parent folder opens with the file selected.
 - Supported pages: folders, files, Box Notes, Box Canvas, and files opened in Office Online.
 - If the folder can't be opened, the reason appears under the icon.
-- Also opens `file:` pages, `file:` links, and selected local paths from the context menu.
 
 ## Requirements
 - Windows or macOS with Box Drive installed and signed in

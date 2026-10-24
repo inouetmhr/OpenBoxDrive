@@ -9,7 +9,6 @@ Object.assign(chrome.runtime, {
 	onInstalled: event('onInstalled'),
 	onStartup: event('onStartup'),
 });
-chrome.contextMenus = { onClicked: event('contextMenus.onClicked') };
 chrome.declarativeContent = { onPageChanged: { removeRules: () => {} } };
 
 let nativeMessages;
@@ -103,12 +102,6 @@ test('box page: shows the popup when the item is not in Box Drive yet', async ()
 	assert.deepEqual(popups.map(({ title, detail }) => ({ title, detail })), [{ title: 'result_does_not_exist', detail: 'C:\\Users\\me\\Box\\New' }]);
 });
 
-test('file url: opens the local path', async () => {
-	await clickAction({ url: 'file:///C:/ProgramData/' });
-	assert.deepEqual(nativeMessages, [{ filePath: 'C:\\ProgramData\\' }]);
-	assert.deepEqual(popups, []);
-});
-
 test('other pages: the icon stays clickable and explains itself in the popup, without injecting', async () => {
 	await clickAction({ url: 'https://example.com/' });
 	assert.deepEqual(nativeMessages, []);
@@ -125,23 +118,20 @@ test('without openPopup the reason goes on the icon badge and tooltip', async ()
 	assert.equal(actionPopup[1], '');
 });
 
-test('context menu: shows the popup when the link is not a local file', async () => {
-	listeners['contextMenus.onClicked']({ menuItemId: 'link', linkUrl: 'https://example.com/' }, { id: 2 });
-	await settle();
-	assert.deepEqual(nativeMessages, []);
-	assert.deepEqual(popups.map(({ title, detail }) => ({ title, detail })), [{ title: 'result_not_a_file_path', detail: 'https://example.com/' }]);
-});
+const boxFolder = () => { injection = () => [{ result: { ok: true, path: ['All Files', 'Team'] } }]; };
 
 test('opens the setup page instead of a message when the native host cannot be reached', async () => {
+	boxFolder();
 	nativeReply = { lastError: { message: 'Specified native messaging host not found.' } };
-	await clickAction({ url: 'file:///C:/ProgramData/' });
+	await clickAction({ url: 'https://app.box.com/folder/1' });
 	assert.equal(optionsPageOpened, 1);
 	assert.deepEqual(popups, []);
 });
 
 test('opens the setup page when the native host is too old to understand the request', async () => {
+	boxFolder();
 	nativeReply = { response: { resultCode: 'bad_request', path: '' } };
-	await clickAction({ url: 'file:///C:/ProgramData/' });
+	await clickAction({ url: 'https://app.box.com/folder/1' });
 	assert.equal(optionsPageOpened, 1);
 });
 

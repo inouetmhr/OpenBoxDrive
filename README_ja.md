@@ -10,9 +10,6 @@ Box の Web ページで見ているフォルダやファイルを、Box Drive �
 - 対応しているページ: フォルダ、ファイル、Box Notes、Box Canvas、Office Online で開いているファイル
 - キーボードショートカット: Windows は `Ctrl+Shift+B`、macOS は `⌘⇧B`（ブラウザの拡張機能の設定で変更できます）
 - 開けなかったときは、アイコンの下に理由を表示します。開けたときは何も表示しません（Explorer / Finder のウインドウが開くことが結果です）。
-- その他の機能
-  - `file:` のページでアイコンをクリックすると、そのフォルダやファイルを開きます。
-  - `file:` のリンクや、選択したパスの文字列（`C:\...`、`\\server\...`、`/Users/...` など）を右クリックメニューから開けます。前後の `"` は無視します。
 
 ## 動作環境
 - Windows または macOS（Box Drive が使える OS のみ）
@@ -55,11 +52,11 @@ npm test
 | テスト | 対象 |
 |---|---|
 | `tests/box-injection.test.js` | Box のページからのパスの取得（DOM と fetch を差し替えて `box-injection.js` を実行） |
-| `tests/background.test.js` | アイコンや右クリックメニューを押したときの動き、エラー表示、設定画面を開く条件 |
+| `tests/background.test.js` | アイコンを押したときの動き、エラー表示、設定画面を開く条件 |
 | `tests/status.test.js` | 設定画面の状態判定（ブラウザのエラーメッセージ → 次にやること） |
 | `tests/installer.test.js` | セットアップファイルの生成（macOS では生成した `.sh` を仮のホームディレクトリで実際に実行） |
 | `tests/test_native_host.py` | ヘルパー（パスの組み立て、Explorer / Finder の呼び出し、`ping`、stdio のやり取り） |
-| `tests/path-utils.test.js`、`tests/context-menu.test.js`、`tests/common.test.js` | URL とパスの変換、メニューの表記、ヘルパーとの通信 |
+| `tests/path-utils.test.js`、`tests/common.test.js` | Box の URL の判定、ヘルパーとの通信 |
 | `tests/setup-templates.test.js`、`tests/package.test.js` | セットアップのテンプレートと設定画面の HTML、ストア提出用パッケージの中身 |
 
 ヘルパーとの間のメッセージ形式を変えるときは、インストール済みの古いヘルパーとも動くようにしてください。ヘルパーは利用者がセットアップをやり直すまで更新されません。新しいヘルパーが必要になったら、`host-app-src/native-messaging-host-app.py` の `HOST_VERSION` と `common.js` の `REQUIRED_HOST_VERSION` を一緒に上げます。
@@ -114,6 +111,6 @@ API や埋め込み JSON の形が変わった場合は、`fetchFolderPath` や 
 - PetitZip ライブラリ https://github.com/McbeEringi/petit/blob/main/docs/zip.md を `setup/zip.mjs` として同梱しています
 
 ## 謝辞
-これは以下の拡張機能の fork です。`file:` のページ・リンク・選択文字列を開く機能は、この拡張機能から引き継いでいます。
+これは以下の拡張機能の fork です。
   - https://chrome.google.com/webstore/detail/open-local-folder-by-expl/ehidkllolkmedbkjbdkcgabdadcfppfg?hl=ja
   - https://github.com/tksugimoto/chrome-extension_open-local-folder-by-explorer

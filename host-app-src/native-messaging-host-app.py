@@ -1,7 +1,7 @@
 """Native messaging host for the Open Box Drive extension.
 
 Each message is a 4-byte little-endian length followed by UTF-8 JSON.
-Requests:  {"filePath": "<local path>"}, {"boxPath": ["All Files", "<folder>", ...]} or {"ping": true}
+Requests:  {"boxPath": ["All Files", "<folder>", ...]} or {"ping": true}
 Responses: {"resultCode": "<code>", "path": "<path>"}; each code has a result_<code> message in _locales.
            ping answers {"resultCode": "pong", "version": HOST_VERSION, "path": <Box Drive folder>, "boxDriveFound": bool}.
 Keep this format compatible: installed hosts are only replaced when the user runs the setup again.
@@ -87,8 +87,6 @@ def ping():
 def handle(request):
     if request.get("ping"):
         return ping()
-    if "filePath" in request:
-        return open_path(request["filePath"])
     if "boxPath" in request:
         return open_box_path(request["boxPath"])
     return {"path": "", "resultCode": "bad_request"}

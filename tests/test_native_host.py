@@ -164,11 +164,17 @@ class MainTest(unittest.TestCase):
         return code, stdout.getvalue()
 
     def test_dispatches_request_and_writes_framed_response(self):
-        with mock.patch.object(host, "open_path", return_value={"path": "あ", "resultCode": "file_opened"}) as open_path:
-            code, out = self.run_main(frame({"filePath": "あ"}))
-        open_path.assert_called_once_with("あ")
+        with mock.patch.object(host, "open_box_path", return_value={"path": "あ", "resultCode": "file_opened"}) as open_box_path:
+            code, out = self.run_main(frame({"boxPath": ["All Files", "あ"]}))
+        open_box_path.assert_called_once_with(["All Files", "あ"])
         self.assertEqual(code, 0)
         self.assertEqual(unframe(out), {"path": "あ", "resultCode": "file_opened"})
+
+    def test_local_paths_are_not_opened(self):
+        with mock.patch.object(host, "open_path") as open_path:
+            code, out = self.run_main(frame({"filePath": "C:\\Windows"}))
+        open_path.assert_not_called()
+        self.assertEqual(unframe(out)["resultCode"], "bad_request")
 
     def test_unknown_request(self):
         code, out = self.run_main(frame({"something": 1}))
@@ -207,31 +213,29 @@ class ResultCodeMessagesTest(unittest.TestCase):
 @unittest.skipUnless(sys.platform == "darwin", "the shell launcher runs /usr/bin/python3 on macOS")
 class LauncherTest(unittest.TestCase):
     def test_shell_launcher_works_from_another_directory(self):
-        missing = os.path.join(tempfile.gettempdir(), "open-box-drive-test-missing-path")
         with tempfile.TemporaryDirectory() as cwd:
             proc = subprocess.run(
                 ["/bin/bash", str(HOST_DIR / "native-messaging-host-app.sh")],
-                input=frame({"filePath": missing}),
+                input=frame({"ping": True}),
                 capture_output=True,
                 cwd=cwd,
                 timeout=10,
                 check=True,
                 env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
             )
-        self.assertEqual(unframe(proc.stdout), {"path": missing, "resultCode": "does_not_exist"})
+        self.assertEqual(unframe(proc.stdout)["resultCode"], "pong")
 
 
 class StdioProtocolTest(unittest.TestCase):
-    def test_round_trip_for_missing_file(self):
-        missing = os.path.join(tempfile.gettempdir(), "open-box-drive-test-missing-path")
+    def test_round_trip_for_ping(self):
         proc = subprocess.run(
             [sys.executable, "-B", str(HOST_PATH)],
-            input=frame({"filePath": missing}),
+            input=frame({"ping": True}),
             capture_output=True,
             timeout=10,
             check=True,
         )
-        self.assertEqual(unframe(proc.stdout), {"path": missing, "resultCode": "does_not_exist"})
+        self.assertEqual(unframe(proc.stdout)["version"], host.HOST_VERSION)
 
 
 if __name__ == "__main__":

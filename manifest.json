@@ -19,7 +19,6 @@
 	"permissions": [
 		"activeTab",
 		"storage",
-		"contextMenus",
 		"nativeMessaging",
 		"scripting",
 		"declarativeContent"

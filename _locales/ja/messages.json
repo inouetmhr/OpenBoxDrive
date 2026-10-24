@@ -12,11 +12,8 @@
 	"setup_page_title": {
 		"message": "設定"
 	},
-	"result_not_a_file_path": {
-		"message": "ファイルパスではありません"
-	},
 	"result_unsupported_page": {
-		"message": "Boxのフォルダ・ファイルのページか file:// のURLでのみ動作します"
+		"message": "Boxのフォルダやファイルのページでのみ動作します"
 	},
 	"result_box_lookup_failed": {
 		"message": "このBoxページのフォルダを特定できませんでした"
@@ -38,32 +35,5 @@
 	},
 	"result_file_opened": {
 		"message": "ファイルのあるフォルダを開きました"
-	},
-	"context_menu_page_default_title": {
-		"message": "フォルダを$SHELL$で開く",
-		"placeholders": {
-			"shell": {
-				"content": "$1",
-				"example": "Explorer"
-			}
-		}
-	},
-	"context_menu_link_default_title": {
-		"message": "リンク先を$SHELL$で開く（ローカルファイルの場合）",
-		"placeholders": {
-			"shell": {
-				"content": "$1",
-				"example": "Explorer"
-			}
-		}
-	},
-	"context_menu_selection_default_title": {
-		"message": "選択文字列を$SHELL$で開く（ローカルファイルパスの場合）",
-		"placeholders": {
-			"shell": {
-				"content": "$1",
-				"example": "Explorer"
-			}
-		}
 	}
 }

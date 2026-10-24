@@ -16,12 +16,12 @@ beforeEach(() => {
 
 test('requestNativeHost resolves with the host result', async () => {
 	nativeReply = { response: { resultCode: 'file_opened', path: 'C:\\a.txt' } };
-	assert.deepEqual(await common.requestNativeHost({ filePath: 'C:\\a.txt' }), { resultCode: 'file_opened', path: 'C:\\a.txt' });
+	assert.deepEqual(await common.requestNativeHost({ boxPath: ['All Files', 'a.txt'] }), { resultCode: 'file_opened', path: 'C:\\a.txt' });
 });
 
 test('requestNativeHost resolves with native_host_error when the host is unavailable', async () => {
 	nativeReply = { lastError: { message: 'Specified native messaging host not found.' } };
-	assert.deepEqual(await common.requestNativeHost({ filePath: 'C:\\' }), {
+	assert.deepEqual(await common.requestNativeHost({ ping: true }), {
 		resultCode: 'native_host_error',
 		path: 'Specified native messaging host not found.',
 	});
