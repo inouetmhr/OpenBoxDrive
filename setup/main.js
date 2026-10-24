@@ -2,46 +2,33 @@ import common from '../common.js';
 import { zip } from './zip.mjs';
 import { stripSurroundingQuotes } from '../path-utils.js';
 
-{
-	const localeCode = chrome.i18n.getMessage('_locale_code');
-	document.querySelectorAll(`[lang="${localeCode}"]`).forEach(e => {
-		e.style.display = 'inline';
-	});
-	document.title = chrome.i18n.getMessage('setup_page_title');
-}
 // Detect OS and browser
 const ua = window.navigator.userAgent.toLowerCase();
-const isMac = ua.includes('macintosh') || ua.includes('mac os');
-const isWindows = ua.includes('windows');
-const isLinux = ua.includes('linux');
+const os = ua.includes('windows') ? 'windows'
+	: (ua.includes('macintosh') || ua.includes('mac os')) ? 'mac'
+	: 'unsupported';
+const isMac = os === 'mac';
 const browser = (ua.indexOf(" edg/") !== -1) ? 'edge' : 'chrome';
-console.log(`Setup is running for ${browser} on ${isMac ? 'MacOS' : isWindows ? 'Windows' : isLinux ? 'Linux' : 'Unknown OS'}`);
+console.log(`Setup is running for ${browser} on ${os}`);
 
-if (isMac) {
-	document.getElementById('prerequisite').style.display = 'none';
-	document.getElementById('install-instruction').innerHTML = "ターミナルで <code>sh setup.sh</code> を実行";
-	document.getElementById('filePathToOpen').value = '/Applications/';
-    document.querySelectorAll('.os-shell').forEach(e => {
-		e.innerText = 'Finder';
+// Show elements for the current locale (lang) and OS (data-os, space separated)
+{
+	const localeCode = chrome.i18n.getMessage('_locale_code');
+	document.querySelectorAll('[lang], [data-os]').forEach(e => {
+		const langMatches = !e.hasAttribute('lang') || e.getAttribute('lang') === localeCode;
+		const osMatches = !e.hasAttribute('data-os') || e.dataset.os.split(' ').includes(os);
+		e.classList.toggle('visible', langMatches && osMatches);
 	});
-	document.getElementById('optional-feature').style.display = 'none';
+	document.title = chrome.i18n.getMessage('setup_page_title');
+	document.querySelectorAll('.os-shell').forEach(e => {
+		e.innerText = isMac ? 'Finder' : 'Explorer';
+	});
+	document.getElementById('filePathToOpen').value = isMac ? '/Applications/' : 'C:\\ProgramData\\';
 }
 
 async function getTextFromURL(url) {
 	const response = await fetch(url);
-	const blob = await response.blob();
-	const reader = new FileReader();
-  
-	return new Promise((resolve, reject) => {
-		reader.onload = function() {
-			const text = reader.result;
-			resolve(text);
-		};
-		reader.onerror = function() {
-			reject(new Error('Failed to read Blob'));
-		};
-		reader.readAsText(blob);
-	});
+	return response.text();
 }
 
 async function getBlobArrayBuffer(url) {
@@ -97,7 +84,7 @@ const generateManifestJson = (nativeMessagingHostPath) => {
 	return JSON.stringify(value, replacer, space);
 };
 
-{
+if (os !== 'unsupported') {
 	const setupZip = await generateSetupZip();
 	const zipLink = document.getElementById('setup-zip-download-link');
 	zipLink.href = URL.createObjectURL(setupZip);

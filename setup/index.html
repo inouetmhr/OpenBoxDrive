@@ -7,10 +7,13 @@
 		body {
 			font-size: large;
 			max-width: 1500px;
-			/* margin: 0 auto; */
 		}
-		[lang] {
+		/* Shown by main.js only for the current locale (lang) and OS (data-os: windows, mac or unsupported) */
+		[lang], [data-os] {
 			display: none;
+		}
+		[lang].visible, [data-os].visible {
+			display: revert;
 		}
 		input {
 			width: 80%;
@@ -31,39 +34,58 @@
 	<h1>
 		<span lang="en">Initialization</span><span lang="ja">初期設定</span>
 	</h1>
-	<p>
-		<span lang="en">Those steps are required to allow the extension to work.</span>
-		<span lang="ja">これらの手順は、拡張機能を機能させるために必須です。</span>
-	</p>
-	<div id="prerequisite">
+
+	<div data-os="unsupported">
+		<p>
+			<span lang="en">Box Drive integration supports only Windows and macOS.</span>
+			<span lang="ja">この拡張機能は Windows と macOS のみに対応しています。</span>
+		</p>
+	</div>
+
+	<div data-os="windows mac">
+		<p>
+			<span lang="en">These steps are required for the extension to work.</span>
+			<span lang="ja">これらの手順は、拡張機能を機能させるために必須です。</span>
+		</p>
 		<h2>
-			<span lang="en">Prerequisite </span>
+			<span lang="en">Prerequisite</span>
 			<span lang="ja">前提</span>
 		</h2>
-			<span lang="en">Install Python 3.x or higher<br></span>
-			<span lang="ja">Python 3以降をインストール (例: <a href="https://www.python.org/downloads/release/python-3131/" target="_blank"> Python 3.13</a>) <br>
-			※python.exeがPATHに登録されていること</span>
-	</div>
-	<h2>
-		<span lang="en">1. Setup</span>
-		<span lang="ja">1. 設定</span>
-	</h2>
-	<span lang="en">Download this zip file and run setup.bat or setup.sh</span>
-	<span lang="ja">以下のファイルをダウンロード・展開してから<span id="install-instruction"><code>setup.bat</code>を実行</span></span>
-	<ul>
-		<li><a id="setup-zip-download-link" download="nativehost-setup.zip">nativehost-setup.zip</a></li>
-	</ul>
+		<p data-os="windows">
+			<span lang="en">Install <a href="https://www.python.org/downloads/" target="_blank">Python 3</a>.
+				The Python launcher (<code>py</code>) or <code>python.exe</code> on PATH is used.</span>
+			<span lang="ja"><a href="https://www.python.org/downloads/" target="_blank">Python 3</a> をインストール<br>
+				※ Pythonランチャー (<code>py</code>) か、PATH上の <code>python.exe</code> を使います</span>
+		</p>
+		<p data-os="mac">
+			<span lang="en"><code>/usr/bin/python3</code> is used. If macOS asks to install the command line developer tools on first use, install them.</span>
+			<span lang="ja"><code>/usr/bin/python3</code> を使います。初回にコマンドライン・デベロッパ・ツールのインストールを求められた場合はインストールしてください</span>
+		</p>
 
-	<h2>
-		<span lang="en">2. Confirm the setup</span>
-		<span lang="ja">2. 動作確認</span>
-	</h2>
+		<h2>
+			<span lang="en">1. Setup</span>
+			<span lang="ja">1. 設定</span>
+		</h2>
+		<p>
+			<span lang="en" data-os="windows">Download and extract the following file, then run <code>setup.bat</code>.</span>
+			<span lang="ja" data-os="windows">以下のファイルをダウンロード・展開してから <code>setup.bat</code> を実行</span>
+			<span lang="en" data-os="mac">Download and extract the following file, then run <code>sh setup.sh</code> in Terminal.</span>
+			<span lang="ja" data-os="mac">以下のファイルをダウンロード・展開してから、ターミナルで <code>sh setup.sh</code> を実行</span>
+		</p>
+		<ul>
+			<li><a id="setup-zip-download-link" download="nativehost-setup.zip">nativehost-setup.zip</a></li>
+		</ul>
+
+		<h2>
+			<span lang="en">2. Confirm the setup</span>
+			<span lang="ja">2. 動作確認</span>
+		</h2>
 		<ol>
 			<li>
-				<span lang="en">Add the path to a folder to Open in <span class="os-shell">Explorer</span></span>
+				<span lang="en">Path to a folder or file to open in <span class="os-shell">Explorer</span></span>
 				<span lang="ja"><span class="os-shell">Explorer</span>で開く フォルダ／ファイル のパス</span>
 				<br>
-				<input id="filePathToOpen" value="C:\ProgramData\">
+				<input id="filePathToOpen">
 			</li>
 			<li>
 				<button type="button" id="test-open">
@@ -72,26 +94,41 @@
 				</button>
 			</li>
 		</ol>
-	<hr>
-	<h1>
-		<span lang="en">Usage</span>
-		<span lang="ja">使い方</span>
-	</h1>
-	<script type="module" src="./main.js"></script>
-	<p>
-		<a href="https://app.box.com/folder/0" target="_blank">Boxのフォルダあるいはファイルのページ</a>を開いている状態で、
-		この拡張機能のアイコン <img src="../icons/icon48.png" style="height:24px;"> をクリックすると、
-		該当する Box Driveのフォルダが<span class="os-shell">Explorer</span>で開きます。
-	</p>	
-	<div id="optional-feature">以下おまけ
-		<ul>
-			<li>file:スキームのページでも同様に動作します</li>
+		<hr>
+		<h1>
+			<span lang="en">Usage</span>
+			<span lang="ja">使い方</span>
+		</h1>
+		<p>
+			<span lang="en">On a <a href="https://app.box.com/folder/0" target="_blank">Box folder or file page</a>,
+				click the extension icon <img src="../icons/icon48.png" style="height:24px;">
+				to open the corresponding Box Drive folder in <span class="os-shell">Explorer</span>.</span>
+			<span lang="ja"><a href="https://app.box.com/folder/0" target="_blank">Boxのフォルダあるいはファイルのページ</a>を開いている状態で、
+				この拡張機能のアイコン <img src="../icons/icon48.png" style="height:24px;"> をクリックすると、
+				該当する Box Driveのフォルダが<span class="os-shell">Explorer</span>で開きます。</span>
+		</p>
+		<div data-os="windows">
+			<span lang="en">Extras</span>
+			<span lang="ja">以下おまけ</span>
 			<ul>
-				<li><a href="file://C:/ProgramData/">file://C:/ProgramData/</a></li>
-			</ul>	
-			<li>上のようなfile:リンクを右クリックすることで<span class="os-shell">Explorer</span>を開けます</li>
-			<li><code>C:\ProgramData\</code> のようなファイルパス文字列を範囲選択して右クリックしても<span class="os-shell">Explorer</span>を開けます</li>
-		</ul>
+				<li>
+					<span lang="en">It also works on <code>file:</code> pages, such as</span>
+					<span lang="ja">file:スキームのページでも同様に動作します</span>
+					<ul>
+						<li><a href="file://C:/ProgramData/">file://C:/ProgramData/</a></li>
+					</ul>
+				</li>
+				<li>
+					<span lang="en">Right-click a <code>file:</code> link like the one above to open it in Explorer.</span>
+					<span lang="ja">上のようなfile:リンクを右クリックすることでExplorerを開けます</span>
+				</li>
+				<li>
+					<span lang="en">Select a path such as <code>C:\ProgramData\</code> and right-click to open it in Explorer.</span>
+					<span lang="ja"><code>C:\ProgramData\</code> のようなファイルパス文字列を範囲選択して右クリックしてもExplorerを開けます</span>
+				</li>
+			</ul>
+		</div>
 	</div>
+	<script type="module" src="./main.js"></script>
 </body>
 </html>
