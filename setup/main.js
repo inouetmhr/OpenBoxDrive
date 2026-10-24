@@ -1,118 +1,128 @@
 import common from '../common.js';
 import { zip } from './zip.mjs';
-import { stripSurroundingQuotes } from '../path-utils.js';
+import { diagnoseHost, needsPolling } from './status.js';
+import { buildMacSetupScript, buildWindowsSetupFiles } from './installer.js';
+
+const POLL_INTERVAL_MS = 2000;
 
 // Detect OS and browser
 const ua = window.navigator.userAgent.toLowerCase();
 const os = ua.includes('windows') ? 'windows'
 	: (ua.includes('macintosh') || ua.includes('mac os')) ? 'mac'
 	: 'unsupported';
-const isMac = os === 'mac';
 const browser = (ua.indexOf(" edg/") !== -1) ? 'edge' : 'chrome';
+const localeCode = chrome.i18n.getMessage('_locale_code');
 console.log(`Setup is running for ${browser} on ${os}`);
 
-// Show elements for the current locale (lang) and OS (data-os, space separated)
-{
-	const localeCode = chrome.i18n.getMessage('_locale_code');
-	document.querySelectorAll('[lang], [data-os]').forEach(e => {
-		const langMatches = !e.hasAttribute('lang') || e.getAttribute('lang') === localeCode;
-		const osMatches = !e.hasAttribute('data-os') || e.dataset.os.split(' ').includes(os);
-		e.classList.toggle('visible', langMatches && osMatches);
+const setText = (selector, text) => {
+	document.querySelectorAll(selector).forEach(e => {
+		e.textContent = text;
 	});
-	document.title = chrome.i18n.getMessage('setup_page_title');
-	document.querySelectorAll('.os-shell').forEach(e => {
-		e.innerText = isMac ? 'Finder' : 'Explorer';
-	});
-	document.getElementById('filePathToOpen').value = isMac ? '/Applications/' : 'C:\\ProgramData\\';
-	document.querySelectorAll('.extension-id').forEach(e => {
-		e.textContent = chrome.runtime.id;
-	});
-}
-
-async function getTextFromURL(url) {
-	const response = await fetch(url);
-	return response.text();
-}
-
-async function getBlobArrayBuffer(url) {
-	const response = await fetch(url);
-	const blob = await response.blob();
-	const arrayBuffer = await blob.arrayBuffer();
-	return arrayBuffer;
-}
-
-async function generateSetupZip() {
-	const nativePyFileName = 'native-messaging-host-app.py';
-	let nativeAppFileName, manifestJsonContent, setupTemplateUrl;
-	if (isMac) {
-		nativeAppFileName = 'native-messaging-host-app.sh';
-		manifestJsonContent = generateManifestJson('___INSTDIR___/' + nativeAppFileName);
-		setupTemplateUrl = "setup.template.sh";
-	} else {
-		nativeAppFileName = 'native-messaging-host-app.bat';
-		manifestJsonContent = generateManifestJson(nativeAppFileName);
-		setupTemplateUrl = "setup.template.bat";
-	}
-
-	const filePromises = [
-		getBlobArrayBuffer(`../host-app-src/${nativeAppFileName}`),
-		getBlobArrayBuffer(`../host-app-src/${nativePyFileName}`),
-		getTextFromURL(setupTemplateUrl)
-	];
-
-	const [nativeAppBuffer, nativePyBuffer, setupTemplate] = await Promise.all(filePromises);
-	const setupScript = setupTemplate.replaceAll("___BROWSER___", browser).replaceAll("___APPLICATIONNAME___", common.applicationName);
-
-	const files = [
-		{name: nativeAppFileName, buffer: nativeAppBuffer},
-		{name: nativePyFileName, buffer: nativePyBuffer},
-		{name: "manifest-template.json", buffer: new Blob([manifestJsonContent])},
-		{name: isMac ? 'setup.sh' : 'setup.bat', buffer: new Blob([setupScript])},
-	];
-	return zip(files);
-}
-
-const generateManifestJson = (nativeMessagingHostPath) => {
-	const value = {
-		name: common.applicationName,
-		description: common.description,
-		path: nativeMessagingHostPath,
-		type: 'stdio',
-		allowed_origins: [
-			`chrome-extension://${chrome.runtime.id}/`,
-		],
-	};
-	const replacer = null;
-	const space = '\t';
-	return JSON.stringify(value, replacer, space);
 };
 
-if (os !== 'unsupported') {
-	const setupZip = await generateSetupZip();
-	const zipLink = document.getElementById('setup-zip-download-link');
-	zipLink.href = URL.createObjectURL(setupZip);
-}
+// Show only elements for the current locale (lang), OS (data-os) and state (data-state); the last two are space separated lists
+const render = status => {
+	document.querySelectorAll('[lang], [data-os], [data-state]').forEach(e => {
+		const langMatches = !e.hasAttribute('lang') || e.getAttribute('lang') === localeCode;
+		const osMatches = !e.dataset.os || e.dataset.os.split(' ').includes(os);
+		const stateMatches = !e.dataset.state || e.dataset.state.split(' ').includes(status.state);
+		e.hidden = !(langMatches && osMatches && stateMatches);
+	});
+	setText('.host-version', status.hostVersion ?? '');
+	setText('.box-drive-path', status.boxDrivePath ?? '');
+	setText('.error-detail', status.detail ?? '');
+	document.body.classList.add('rendered');
+};
 
 {
-	const filePathToOpen = document.getElementById('filePathToOpen');
-	const openButton = document.getElementById('test-open');
-	const testResult = document.getElementById('test-result');
-	// Show the result on the page too: notifications may be turned off in the OS
-	const execOpen = async () => {
-		const filePath = stripSurroundingQuotes(String(filePathToOpen.value));
-		const message = {
-			filePath,
-		};
-		testResult.textContent = '';
-		const result = await common.sendNativeRequest(message);
-		const succeeded = ['directory_opened', 'file_opened'].includes(result.resultCode);
-		testResult.dataset.status = succeeded ? 'ok' : 'error';
-		testResult.textContent = `${chrome.i18n.getMessage(`result_${result.resultCode}`) || result.resultCode}: ${result.path ?? ''}`;
+	document.title = chrome.i18n.getMessage('setup_page_title');
+	setText('.os-name', os === 'mac' ? 'macOS' : 'Windows');
+	setText('.os-shell', os === 'mac' ? 'Finder' : 'Explorer');
+	setText('.browser-name', browser === 'edge' ? 'Microsoft Edge' : 'Google Chrome');
+	setText('.extension-id', chrome.runtime.id);
+	// The user may have changed the shortcut in the browser's extension settings
+	const commands = await chrome.commands.getAll();
+	const shortcut = commands.find(command => command.name === '_execute_action')?.shortcut;
+	setText('.shortcut', shortcut ?? '');
+	document.querySelectorAll('.shortcut-line').forEach(e => {
+		e.style.display = shortcut ? '' : 'none';
+	});
+}
+
+// --- Checking the helper ---
+
+let pollTimer;
+const check = async () => {
+	clearTimeout(pollTimer);
+	const status = os === 'unsupported'
+		? { state: 'unsupported' }
+		: diagnoseHost(await common.requestNativeHost({ ping: true }), common.REQUIRED_HOST_VERSION);
+	render(status);
+	// Each check starts the helper process, so stop while the page is in the background
+	if (needsPolling(status.state) && !document.hidden) {
+		pollTimer = setTimeout(check, POLL_INTERVAL_MS);
+	}
+};
+document.addEventListener('visibilitychange', () => {
+	if (!document.hidden) check();
+});
+render({ state: 'checking' });
+check();
+
+// --- Downloading the setup file ---
+
+const fetchText = async url => (await fetch(url)).text();
+
+const download = (name, blob) => {
+	const a = document.createElement('a');
+	a.href = URL.createObjectURL(blob);
+	a.download = name;
+	a.click();
+	setTimeout(() => URL.revokeObjectURL(a.href), 60 * 1000);
+};
+
+// Built on click from the extension's current files, so a page left open doesn't hand out an old helper
+const downloadSetup = async () => {
+	const options = {
+		browser,
+		applicationName: common.applicationName,
+		description: common.description,
+		extensionId: chrome.runtime.id,
 	};
-	openButton.addEventListener('click', execOpen);
-	filePathToOpen.addEventListener('keydown', evt => {
-		if (evt.key === 'Enter') {
-			execOpen();
-		}
+	if (os === 'mac') {
+		const [template, hostPy, hostSh] = await Promise.all([
+			fetchText('setup.template.sh'),
+			fetchText('../host-app-src/native-messaging-host-app.py'),
+			fetchText('../host-app-src/native-messaging-host-app.sh'),
+		]);
+		const script = buildMacSetupScript({ ...options, template, hostPy, hostSh });
+		download('open-box-drive-setup.sh', new Blob([script], { type: 'text/x-sh' }));
+		return;
+	}
+	const [template, hostPy, hostBat] = await Promise.all([
+		fetchText('setup.template.bat'),
+		fetchText('../host-app-src/native-messaging-host-app.py'),
+		fetchText('../host-app-src/native-messaging-host-app.bat'),
+	]);
+	const files = buildWindowsSetupFiles({ ...options, template, hostPy, hostBat });
+	download('nativehost-setup.zip', await zip(files.map(({ name, content }) => ({ name, buffer: new Blob([content]) }))));
+};
+document.getElementById('download-setup').addEventListener('click', downloadSetup);
+
+document.getElementById('copy-mac-command').addEventListener('click', () => {
+	navigator.clipboard.writeText(document.getElementById('mac-command').textContent);
+});
+
+// --- Trying it out ---
+
+{
+	const openResult = document.getElementById('open-result');
+	document.getElementById('open-box-drive').addEventListener('click', async () => {
+		openResult.textContent = '';
+		// Also notifies, which shows the user whether notifications reach them
+		const result = await common.sendNativeRequest({ boxPath: ['All Files'] });
+		const succeeded = ['directory_opened', 'file_opened'].includes(result.resultCode);
+		openResult.dataset.status = succeeded ? 'ok' : 'error';
+		openResult.textContent = `${chrome.i18n.getMessage(`result_${result.resultCode}`) || result.resultCode}: ${result.path ?? ''}`;
 	});
 }

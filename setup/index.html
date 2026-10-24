@@ -2,147 +2,396 @@
 <html>
 <head>
 	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>Setup</title>
 	<style>
+		:root {
+			color-scheme: light dark;
+			--bg: #f6f6f4;
+			--card: #ffffff;
+			--text: #1f1f1d;
+			--muted: #6b6a66;
+			--border: #dddcd6;
+			--accent: #1d5fa8;
+			--accent-bg: #e6f0fb;
+			--ok: #2f6b10;
+			--ok-bg: #eaf3de;
+			--ng: #a32d2d;
+			--ng-bg: #fcebeb;
+			--code-bg: #f0efea;
+		}
+		@media (prefers-color-scheme: dark) {
+			:root {
+				--bg: #1c1c1b;
+				--card: #262624;
+				--text: #ecebe6;
+				--muted: #a4a39d;
+				--border: #3d3d3a;
+				--accent: #85b7eb;
+				--accent-bg: #0c3560;
+				--ok: #97c459;
+				--ok-bg: #26410c;
+				--ng: #f09595;
+				--ng-bg: #5a1a1a;
+				--code-bg: #33332f;
+			}
+		}
 		body {
-			font-size: large;
-			max-width: 1500px;
+			margin: 0;
+			background: var(--bg);
+			color: var(--text);
+			font: 15px/1.7 system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", sans-serif;
 		}
-		/* Shown by main.js only for the current locale (lang) and OS (data-os: windows, mac or unsupported) */
-		[lang], [data-os] {
-			display: none;
+		main {
+			max-width: 720px;
+			margin: 32px auto;
+			padding: 0 16px;
 		}
-		[lang].visible, [data-os].visible {
-			display: revert;
+		/* main.js sets hidden on elements whose lang, data-os or data-state doesn't match, then marks the body rendered */
+		[hidden] {
+			display: none !important;
 		}
-		input {
-			width: 80%;
-			padding: 5px;
-			margin: 5px;
+		body:not(.rendered) main {
+			visibility: hidden;
+		}
+		header {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			flex-wrap: wrap;
+		}
+		h1 {
+			font-size: 22px;
+			font-weight: 600;
+			margin: 0;
+		}
+		h2 {
+			font-size: 16px;
+			font-weight: 600;
+			margin: 2px 0;
+		}
+		p {
+			margin: 4px 0;
+		}
+		a {
+			color: var(--accent);
+		}
+		code, kbd {
+			font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+			font-size: 13px;
+			background: var(--code-bg);
+			padding: 1px 6px;
+			border-radius: 4px;
+		}
+		.badge {
+			font-size: 13px;
+			padding: 2px 10px;
+			border-radius: 999px;
+			margin-left: auto;
+		}
+		.badge.now { background: var(--accent-bg); color: var(--accent); }
+		.badge.ok { background: var(--ok-bg); color: var(--ok); }
+		.context, .muted {
+			color: var(--muted);
+		}
+		.card {
+			background: var(--card);
+			border: 1px solid var(--border);
+			border-radius: 12px;
+			padding: 4px 20px;
+			margin-top: 16px;
+		}
+		ol.steps {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+		}
+		.step {
+			display: flex;
+			gap: 14px;
+			padding: 16px 0;
+		}
+		.step + .step {
+			border-top: 1px solid var(--border);
+		}
+		.step-body {
+			flex: 1;
+			min-width: 0;
+		}
+		/* Status mark of each step: a number until it is done */
+		.mark {
+			flex: none;
+			width: 28px;
+			height: 28px;
+			border-radius: 50%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-weight: 600;
+			font-size: 14px;
+		}
+		.mark.now { background: var(--accent-bg); color: var(--accent); }
+		.mark.ok { background: var(--ok-bg); color: var(--ok); }
+		.mark.ng { background: var(--ng-bg); color: var(--ng); }
+		.mark.todo { background: var(--code-bg); color: var(--muted); }
+		.how-to {
+			margin: 12px 0 4px;
+			padding-left: 20px;
+		}
+		.how-to > li {
+			margin: 8px 0;
 		}
 		button {
+			font: inherit;
+			color: var(--text);
+			background: var(--card);
+			border: 1px solid var(--border);
+			border-radius: 8px;
+			padding: 6px 14px;
 			cursor: pointer;
-			padding: 5px;
-			border-radius: 5px;
 		}
-		ol > li {
-			margin-top:7px;
+		button:hover {
+			border-color: var(--muted);
 		}
-		#test-result[data-status="ok"] {
-			color: green;
+		button.primary {
+			background: var(--accent);
+			border-color: var(--accent);
+			color: var(--card);
 		}
-		#test-result[data-status="error"] {
-			color: firebrick;
+		.waiting::before {
+			content: "";
+			display: inline-block;
+			width: 10px;
+			height: 10px;
+			margin-right: 8px;
+			border: 2px solid var(--muted);
+			border-right-color: transparent;
+			border-radius: 50%;
+			animation: spin 1s linear infinite;
+		}
+		@keyframes spin {
+			to { transform: rotate(360deg); }
+		}
+		.error { color: var(--ng); }
+		.result[data-status="ok"] { color: var(--ok); }
+		.result[data-status="error"] { color: var(--ng); }
+		details {
+			margin-top: 12px;
+		}
+		summary {
+			cursor: pointer;
+			color: var(--muted);
+		}
+		footer {
+			margin-top: 16px;
+			font-size: 13px;
+		}
+		.path {
+			overflow-wrap: anywhere;
 		}
 	</style>
 </head>
 <body>
-	<h1>
-		<span lang="en">Initialization</span><span lang="ja">初期設定</span>
-	</h1>
+<main>
+	<header>
+		<h1>
+			<span lang="en">Open Box Drive setup</span>
+			<span lang="ja">Open Box Drive の設定</span>
+		</h1>
+		<span class="badge now" data-state="checking">
+			<span lang="en">Checking…</span><span lang="ja">確認中…</span>
+		</span>
+		<span class="badge now" data-state="not_installed wrong_extension_id host_failed host_outdated box_drive_missing">
+			<span lang="en">Action needed</span><span lang="ja">対応が必要です</span>
+		</span>
+		<span class="badge ok" data-state="ready">
+			<span lang="en">Ready</span><span lang="ja">準備完了</span>
+		</span>
+	</header>
+	<p class="context" data-os="windows mac">
+		<span lang="en">Setting up for <span class="os-name"></span> and <span class="browser-name"></span></span>
+		<span lang="ja"><span class="os-name"></span> ・ <span class="browser-name"></span> 向けに設定します</span>
+	</p>
 
-	<div data-os="unsupported">
+	<div class="card" data-os="unsupported">
 		<p>
-			<span lang="en">Box Drive integration supports only Windows and macOS.</span>
-			<span lang="ja">この拡張機能は Windows と macOS のみに対応しています。</span>
+			<span lang="en">Open Box Drive works only on Windows and macOS, where Box Drive is available.</span>
+			<span lang="ja">Open Box Drive は、Box Drive が使える Windows と macOS でのみ動作します。</span>
 		</p>
 	</div>
 
-	<div data-os="windows mac">
-		<p>
-			<span lang="en">These steps are required for the extension to work.</span>
-			<span lang="ja">これらの手順は、拡張機能を機能させるために必須です。</span>
-		</p>
-		<h2>
-			<span lang="en">Prerequisite</span>
-			<span lang="ja">前提</span>
-		</h2>
-		<p data-os="windows">
-			<span lang="en">Install <a href="https://www.python.org/downloads/" target="_blank">Python 3</a>.
-				The Python launcher (<code>py</code>) or <code>python.exe</code> on PATH is used.</span>
-			<span lang="ja"><a href="https://www.python.org/downloads/" target="_blank">Python 3</a> をインストール<br>
-				※ Pythonランチャー (<code>py</code>) か、PATH上の <code>python.exe</code> を使います</span>
-		</p>
-		<p data-os="mac">
-			<span lang="en"><code>/usr/bin/python3</code> is used. If macOS asks to install the command line developer tools on first use, install them.</span>
-			<span lang="ja"><code>/usr/bin/python3</code> を使います。初回にコマンドライン・デベロッパ・ツールのインストールを求められた場合はインストールしてください</span>
-		</p>
+	<div class="card" data-os="windows mac">
+		<ol class="steps">
+			<!-- 1. Native messaging host ("helper") -->
+			<li class="step">
+				<span class="mark todo" data-state="checking">1</span>
+				<span class="mark now" data-state="not_installed host_outdated">1</span>
+				<span class="mark ng" data-state="wrong_extension_id host_failed">!</span>
+				<span class="mark ok" data-state="box_drive_missing ready">✓</span>
+				<div class="step-body">
+					<h2 data-state="checking">
+						<span lang="en">Checking the helper…</span><span lang="ja">ヘルパーを確認しています…</span>
+					</h2>
+					<h2 data-state="not_installed">
+						<span lang="en">Install the helper</span><span lang="ja">ヘルパーをインストール</span>
+					</h2>
+					<h2 data-state="wrong_extension_id">
+						<span lang="en">Set up the helper again</span><span lang="ja">ヘルパーをもう一度セットアップしてください</span>
+					</h2>
+					<h2 data-state="host_failed">
+						<span lang="en">The helper doesn't respond</span><span lang="ja">ヘルパーが応答しません</span>
+					</h2>
+					<h2 data-state="host_outdated">
+						<span lang="en">Update the helper</span><span lang="ja">ヘルパーを更新してください</span>
+					</h2>
+					<h2 data-state="box_drive_missing ready">
+						<span lang="en">Helper</span><span lang="ja">ヘルパー</span>
+					</h2>
 
-		<h2>
-			<span lang="en">1. Setup</span>
-			<span lang="ja">1. 設定</span>
-		</h2>
-		<p>
-			<span lang="en" data-os="windows">Download and extract the following file, then run <code>setup.bat</code>.</span>
-			<span lang="ja" data-os="windows">以下のファイルをダウンロード・展開してから <code>setup.bat</code> を実行</span>
-			<span lang="en" data-os="mac">Download and extract the following file, then run <code>sh setup.sh</code> in Terminal.</span>
-			<span lang="ja" data-os="mac">以下のファイルをダウンロード・展開してから、ターミナルで <code>sh setup.sh</code> を実行</span>
-		</p>
-		<ul>
-			<li><a id="setup-zip-download-link" download="nativehost-setup.zip">nativehost-setup.zip</a></li>
-		</ul>
-		<p>
-			<span lang="en">Run the setup again when the extension ID changes (for example after reinstalling it,
-				or loading it from another folder), or when an update of the extension asks for it.<br>
-				Extension ID: <code class="extension-id"></code></span>
-			<span lang="ja">※ 拡張機能のIDが変わったとき（再インストールや、別のフォルダからの読み込みなど）や、拡張機能の更新で案内があったときは、もう一度セットアップしてください<br>
-				この拡張機能のID: <code class="extension-id"></code></span>
-		</p>
+					<p data-state="not_installed">
+						<span lang="en">The extension needs a small helper program on this computer to open folders in <span class="os-shell"></span>.</span>
+						<span lang="ja">フォルダを <span class="os-shell"></span> で開くために、小さなヘルパープログラムをこのパソコンに入れます。</span>
+					</p>
+					<p data-state="wrong_extension_id">
+						<span lang="en">The helper is registered for another extension ID. This happens after reinstalling the extension or loading it from another folder.</span>
+						<span lang="ja">ヘルパーが別の拡張機能 ID 向けに登録されています。拡張機能を入れ直したときや、別のフォルダから読み込んだときに起こります。</span>
+					</p>
+					<p data-state="host_failed">
+						<span lang="en">The helper is registered but couldn't start. Python may be unavailable, or the helper may be too old.</span>
+						<span lang="ja">ヘルパーは登録されていますが、起動できませんでした。Python が使えないか、ヘルパーが古い可能性があります。</span>
+					</p>
+					<p class="muted" data-state="host_failed">
+						<span lang="en">Details:</span><span lang="ja">詳細:</span> <span class="error-detail"></span>
+					</p>
+					<p data-state="host_outdated">
+						<span lang="en">The installed helper is older than this version of the extension needs.</span>
+						<span lang="ja">インストール済みのヘルパーが古いため、この拡張機能では使えません。</span>
+					</p>
+					<p class="muted" data-state="box_drive_missing ready">
+						<span lang="en">Version</span><span lang="ja">バージョン</span> <span class="host-version"></span>
+					</p>
 
-		<h2>
-			<span lang="en">2. Confirm the setup</span>
-			<span lang="ja">2. 動作確認</span>
-		</h2>
-		<ol>
-			<li>
-				<span lang="en">Path to a folder or file to open in <span class="os-shell">Explorer</span></span>
-				<span lang="ja"><span class="os-shell">Explorer</span>で開く フォルダ／ファイル のパス</span>
-				<br>
-				<input id="filePathToOpen">
+					<div data-state="not_installed wrong_extension_id host_failed host_outdated">
+						<ol class="how-to">
+							<li data-os="windows">
+								<span lang="en"><a href="https://www.python.org/downloads/" target="_blank">Python 3</a> is required. The installer from python.org sets it up as the helper needs.</span>
+								<span lang="ja"><a href="https://www.python.org/downloads/" target="_blank">Python 3</a> が必要です。python.org のインストーラーで入れれば、そのまま使えます。</span>
+							</li>
+							<li>
+								<button type="button" class="primary" id="download-setup">
+									<span lang="en">Download the setup file</span>
+									<span lang="ja">セットアップファイルをダウンロード</span>
+								</button>
+							</li>
+							<li data-os="windows">
+								<span lang="en">Extract <code>nativehost-setup.zip</code> and double-click <code>setup.bat</code> in it.
+									If Windows shows "Windows protected your PC", choose "More info" and then "Run anyway".</span>
+								<span lang="ja"><code>nativehost-setup.zip</code> を展開して、中の <code>setup.bat</code> をダブルクリックします。
+									「Windows によって PC が保護されました」と表示されたら、「詳細情報」→「実行」を選びます。</span>
+							</li>
+							<li data-os="mac">
+								<span lang="en">Open Terminal, type <code>sh</code> and a space, drag the downloaded <code>open-box-drive-setup.sh</code> into the window, and press Return.</span>
+								<span lang="ja">ターミナルを開き、<code>sh</code> と半角スペースを入力してから、ダウンロードした <code>open-box-drive-setup.sh</code> をウインドウにドラッグして Return キーを押します。</span>
+								<p class="muted">
+									<span lang="en">Or run</span><span lang="ja">または次のコマンドを実行:</span>
+									<code id="mac-command">sh ~/Downloads/open-box-drive-setup.sh</code>
+									<button type="button" id="copy-mac-command">
+										<span lang="en">Copy</span><span lang="ja">コピー</span>
+									</button>
+								</p>
+								<p class="muted">
+									<span lang="en">If macOS asks to install the command line developer tools, install them: the helper uses <code>/usr/bin/python3</code>.</span>
+									<span lang="ja">コマンドライン・デベロッパ・ツールのインストールを求められたら、インストールしてください（ヘルパーは <code>/usr/bin/python3</code> を使います）。</span>
+								</p>
+							</li>
+						</ol>
+						<p class="muted waiting">
+							<span lang="en">Waiting for the helper. This page moves on by itself when the setup finishes.</span>
+							<span lang="ja">ヘルパーを待っています。セットアップが終わると、この画面は自動で次に進みます。</span>
+						</p>
+					</div>
+				</div>
 			</li>
-			<li>
-				<button type="button" id="test-open">
-					<span lang="en">Open in <span class="os-shell">Explorer</span></span>
-					<span lang="ja"><span class="os-shell">Explorer</span>で開く</span>
-				</button>
-				<p id="test-result" role="status"></p>
+
+			<!-- 2. Box Drive folder, which only the helper can check -->
+			<li class="step">
+				<span class="mark todo" data-state="checking not_installed wrong_extension_id host_failed host_outdated">2</span>
+				<span class="mark now" data-state="box_drive_missing">2</span>
+				<span class="mark ok" data-state="ready">✓</span>
+				<div class="step-body">
+					<h2>Box Drive</h2>
+					<p class="muted" data-state="checking not_installed wrong_extension_id host_failed host_outdated">
+						<span lang="en">Checked after the helper is set up.</span>
+						<span lang="ja">ヘルパーのセットアップ後に確認します。</span>
+					</p>
+					<div data-state="box_drive_missing">
+						<p>
+							<span lang="en">The Box Drive folder wasn't found:</span>
+							<span lang="ja">Box Drive のフォルダが見つかりません:</span>
+							<code class="path box-drive-path"></code>
+						</p>
+						<p>
+							<span lang="en">Install <a href="https://www.box.com/resources/downloads" target="_blank">Box Drive</a> and sign in.</span>
+							<span lang="ja"><a href="https://www.box.com/resources/downloads" target="_blank">Box Drive</a> をインストールして、サインインしてください。</span>
+						</p>
+						<p class="muted waiting">
+							<span lang="en">Waiting for Box Drive…</span><span lang="ja">Box Drive を待っています…</span>
+						</p>
+					</div>
+					<p class="muted" data-state="ready"><code class="path box-drive-path"></code></p>
+				</div>
+			</li>
+
+			<!-- 3. How to use, once everything works -->
+			<li class="step" data-state="ready">
+				<span class="mark ok">✓</span>
+				<div class="step-body">
+					<h2>
+						<span lang="en">How to use</span><span lang="ja">使い方</span>
+					</h2>
+					<p>
+						<span lang="en">On a <a href="https://app.box.com/folder/0" target="_blank">Box folder or file page</a>, click the Open Box Drive icon in the toolbar to open it in <span class="os-shell"></span>.</span>
+						<span lang="ja"><a href="https://app.box.com/folder/0" target="_blank">Box のフォルダやファイルのページ</a>で、ツールバーの Open Box Drive のアイコンをクリックすると、<span class="os-shell"></span> で開きます。</span>
+					</p>
+					<p class="shortcut-line">
+						<span lang="en">Shortcut:</span><span lang="ja">ショートカット:</span> <kbd class="shortcut"></kbd>
+					</p>
+					<p>
+						<button type="button" id="open-box-drive">
+							<span lang="en">Try opening Box Drive</span><span lang="ja">Box Drive を開いてみる</span>
+						</button>
+					</p>
+					<p class="result" id="open-result" role="status"></p>
+					<p class="muted">
+						<span lang="en">If no notification appears, allow notifications for <span class="browser-name"></span> in the OS settings.</span>
+						<span lang="ja">通知が表示されない場合は、OS の通知設定で <span class="browser-name"></span> を許可してください。</span>
+					</p>
+					<details data-os="windows">
+						<summary><span lang="en">Other features</span><span lang="ja">その他の機能</span></summary>
+						<ul>
+							<li>
+								<span lang="en">The icon also works on <code>file:</code> pages, such as <a href="file://C:/ProgramData/">file://C:/ProgramData/</a>.</span>
+								<span lang="ja"><code>file:</code> のページ（例: <a href="file://C:/ProgramData/">file://C:/ProgramData/</a>）でもアイコンで開けます。</span>
+							</li>
+							<li>
+								<span lang="en">Right-click a <code>file:</code> link to open it in Explorer.</span>
+								<span lang="ja"><code>file:</code> のリンクを右クリックして Explorer で開けます。</span>
+							</li>
+							<li>
+								<span lang="en">Select a path such as <code>C:\ProgramData\</code> and right-click to open it in Explorer.</span>
+								<span lang="ja"><code>C:\ProgramData\</code> のようなパスを選択して右クリックしても Explorer で開けます。</span>
+							</li>
+						</ul>
+					</details>
+				</div>
 			</li>
 		</ol>
-		<hr>
-		<h1>
-			<span lang="en">Usage</span>
-			<span lang="ja">使い方</span>
-		</h1>
-		<p>
-			<span lang="en">On a <a href="https://app.box.com/folder/0" target="_blank">Box folder or file page</a>,
-				click the extension icon <img src="../icons/icon48.png" style="height:24px;">
-				to open the corresponding Box Drive folder in <span class="os-shell">Explorer</span>.</span>
-			<span lang="ja"><a href="https://app.box.com/folder/0" target="_blank">Boxのフォルダあるいはファイルのページ</a>を開いている状態で、
-				この拡張機能のアイコン <img src="../icons/icon48.png" style="height:24px;"> をクリックすると、
-				該当する Box Driveのフォルダが<span class="os-shell">Explorer</span>で開きます。</span>
-		</p>
-		<div data-os="windows">
-			<span lang="en">Extras</span>
-			<span lang="ja">以下おまけ</span>
-			<ul>
-				<li>
-					<span lang="en">It also works on <code>file:</code> pages, such as</span>
-					<span lang="ja">file:スキームのページでも同様に動作します</span>
-					<ul>
-						<li><a href="file://C:/ProgramData/">file://C:/ProgramData/</a></li>
-					</ul>
-				</li>
-				<li>
-					<span lang="en">Right-click a <code>file:</code> link like the one above to open it in Explorer.</span>
-					<span lang="ja">上のようなfile:リンクを右クリックすることでExplorerを開けます</span>
-				</li>
-				<li>
-					<span lang="en">Select a path such as <code>C:\ProgramData\</code> and right-click to open it in Explorer.</span>
-					<span lang="ja"><code>C:\ProgramData\</code> のようなファイルパス文字列を範囲選択して右クリックしてもExplorerを開けます</span>
-				</li>
-			</ul>
-		</div>
 	</div>
-	<script type="module" src="./main.js"></script>
+
+	<footer class="muted">
+		<span lang="en">Extension ID:</span><span lang="ja">拡張機能 ID:</span> <code class="extension-id"></code>
+	</footer>
+</main>
+<script type="module" src="./main.js"></script>
 </body>
 </html>

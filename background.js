@@ -6,6 +6,15 @@ import {
 	extractFilePath,
 	convertUrl2FilePath,
 } from './path-utils.js';
+import { diagnoseHost } from './setup/status.js';
+
+// Send to the native host; when it is missing or too old, open the setup page, which tells what to do
+const sendToHost = async message => {
+	const result = await common.sendNativeRequest(message);
+	if (['native_host_error', 'bad_request'].includes(result?.resultCode)) {
+		chrome.runtime.openOptionsPage();
+	}
+};
 
 // --- Setup declarativeContent Rule ---
 
@@ -56,12 +65,19 @@ const setupDeclarativeContent = () => {
 
 // --- Lifecycle & Initialization ---
 
-chrome.runtime.onInstalled.addListener(details => {
+chrome.runtime.onInstalled.addListener(async details => {
+	setupDeclarativeContent();
+
 	if (details.reason === 'install') {
 		chrome.runtime.openOptionsPage();
 	}
-
-	setupDeclarativeContent();
+	if (details.reason === 'update') {
+		// An update may need a newer helper than the one installed
+		const status = diagnoseHost(await common.requestNativeHost({ ping: true }), common.REQUIRED_HOST_VERSION);
+		if (['host_outdated', 'host_failed'].includes(status.state)) {
+			chrome.runtime.openOptionsPage();
+		}
+	}
 });
 
 chrome.runtime.onInstalled.addListener(createContextMenu);
@@ -78,7 +94,7 @@ chrome.contextMenus.onClicked.addListener((info) => {
 		});
 		return;
 	}
-	common.sendNativeRequest({ filePath: extractResult.path });
+	sendToHost({ filePath: extractResult.path });
 });
 
 chrome.action.onClicked.addListener(async (tab) => {
@@ -115,7 +131,7 @@ async function clickedAction(tab) {
 		return { result: "handled" };
 	}
 	if (isFileUrl(tab.url)) {
-		common.sendNativeRequest({ filePath: convertUrl2FilePath(tab.url) });
+		sendToHost({ filePath: convertUrl2FilePath(tab.url) });
 		return { result: "handled" };
 	}
 	return { result: "unsupported" };
@@ -125,7 +141,7 @@ async function clickedAction(tab) {
 function openBoxDrive(result) {
 	console.info("Box lookup result:", result);
 	if (result?.ok) {
-		common.sendNativeRequest({ boxPath: result.path });
+		sendToHost({ boxPath: result.path });
 		return;
 	}
 	common.showNotification({

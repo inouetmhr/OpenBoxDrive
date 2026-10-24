@@ -2,27 +2,35 @@ import './helpers/chrome-stub.js';
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
-// Capture listeners that background.js registers at load time
+// Capture listeners that background.js registers at load time; the first one of each event is the one under test
 const listeners = {};
-const event = name => ({ addListener: fn => { listeners[name] = fn; } });
+const event = name => ({ addListener: fn => { listeners[name] ??= fn; } });
 Object.assign(chrome.runtime, {
 	onInstalled: event('onInstalled'),
 	onStartup: event('onStartup'),
 });
 chrome.contextMenus = { onClicked: event('contextMenus.onClicked') };
 chrome.action = { onClicked: event('action.onClicked') };
+chrome.declarativeContent = { onPageChanged: { removeRules: () => {} } };
 
 let notifications;
 let nativeMessages;
+let nativeReply;
 let injection;
+let optionsPageOpened;
 
 beforeEach(() => {
 	notifications = [];
 	nativeMessages = [];
 	chrome.notifications = { create: options => notifications.push(options) };
+	nativeReply = { response: { resultCode: 'directory_opened', path: 'opened' } };
+	optionsPageOpened = 0;
+	chrome.runtime.openOptionsPage = () => { optionsPageOpened++; };
 	chrome.runtime.sendNativeMessage = (name, message, callback) => {
 		nativeMessages.push(message);
-		callback({ resultCode: 'directory_opened', path: 'opened' });
+		chrome.runtime.lastError = nativeReply.lastError;
+		callback(nativeReply.response);
+		delete chrome.runtime.lastError;
 	};
 	chrome.scripting = { executeScript: async () => injection() };
 });
@@ -77,4 +85,36 @@ test('context menu: notifies when the link is not a local file', () => {
 	assert.deepEqual(nativeMessages, []);
 	assert.equal(notifications[0].title, 'result_not_a_file_path');
 	assert.equal(notifications[0].message, 'https://example.com/');
+});
+
+const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+
+test('opens the setup page when the native host cannot be reached', async () => {
+	nativeReply = { lastError: { message: 'Specified native messaging host not found.' } };
+	await clickAction({ url: 'file:///C:/ProgramData/' });
+	await settle();
+	assert.equal(optionsPageOpened, 1);
+	assert.equal(notifications[0].title, 'result_native_host_error');
+});
+
+test('opens the setup page when the native host is too old to understand the request', async () => {
+	nativeReply = { response: { resultCode: 'bad_request', path: '' } };
+	await clickAction({ url: 'file:///C:/ProgramData/' });
+	await settle();
+	assert.equal(optionsPageOpened, 1);
+});
+
+test('does not open the setup page when the host answers', async () => {
+	await clickAction({ url: 'file:///C:/ProgramData/' });
+	await settle();
+	assert.equal(optionsPageOpened, 0);
+});
+
+test('update: opens the setup page only when the installed helper is outdated', async () => {
+	nativeReply = { response: { resultCode: 'bad_request', path: '' } };
+	await listeners.onInstalled({ reason: 'update' });
+	assert.equal(optionsPageOpened, 1);
+	nativeReply = { response: { resultCode: 'pong', version: 2, path: '/Box', boxDriveFound: true } };
+	await listeners.onInstalled({ reason: 'update' });
+	assert.equal(optionsPageOpened, 1);
 });
