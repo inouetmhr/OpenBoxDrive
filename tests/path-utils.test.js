@@ -20,6 +20,11 @@ test('isBoxUrl', async t => {
 		assert.ok(!isBoxUrl('file:///C:/'));
 		assert.ok(!isBoxUrl(undefined));
 	});
+	await t.test('checks the host name, not the whole url', () => {
+		assert.ok(!isBoxUrl('https://example.com/?next=https://app.box.com/folder/0'));
+		assert.ok(!isBoxUrl('https://app.box.com.example.com/folder/0'));
+		assert.ok(!isBoxUrl('https://notapp.box.com/folder/0'));
+	});
 });
 
 test('isFileUrl', () => {

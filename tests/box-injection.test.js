@@ -18,7 +18,7 @@ const folderApi = (...names) => ({
  * @param {object} [page.elements] selector -> element returned by document.querySelector
  * @param {object} [page.responses] url -> fetch response
  * @param {object} [page.parsedDocs] html text -> elements map for DOMParser results
- * @returns {{ result: Promise<string[]>, fetched: string[], alerts: string[] }}
+ * @returns {{ result: Promise<string[]>, fetched: string[], alerts: string[], context: object }}
  */
 const runInjection = ({ url, elements = {}, responses = {}, parsedDocs = {} }) => {
 	const fetched = [];
@@ -40,7 +40,7 @@ const runInjection = ({ url, elements = {}, responses = {}, parsedDocs = {} }) =
 		console: { log: () => {} },
 	});
 	const result = vm.runInContext(source, context);
-	return { result, fetched, alerts };
+	return { result, fetched, alerts, context };
 };
 
 test('folder page resolves path from folder API', async () => {
@@ -131,4 +131,69 @@ test('unsupported page alerts and rejects', async () => {
 test('file page without parent folder link rejects', async () => {
 	const { result } = runInjection({ url: `${BASE}/file/999` });
 	await assert.rejects(result, /Failed to resolve folder id for type=file/);
+});
+
+test('falls back to the older preview header selector', async () => {
+	const { result } = runInjection({
+		url: `${BASE}/file/999`,
+		elements: {
+			"[data-resin-target='parentfoldername']": { href: `${BASE}/folder/222` },
+			'div.preview-header-title-section > h1': { innerText: 'old.pdf' },
+		},
+		responses: {
+			[`${BASE}/app-api/enduserapp/folder/222`]: folderApi('All Files'),
+		},
+	});
+	assert.deepEqual([...await result], ['All Files', 'old.pdf']);
+});
+
+test('box url in a query string of another site is not supported', async () => {
+	const { result, alerts } = runInjection({ url: `https://example.com/?next=${BASE}/folder/1` });
+	await assert.rejects(result, /unsupported page/);
+	assert.equal(alerts.length, 1);
+});
+
+test('can be injected again into the same page', async () => {
+	const page = {
+		url: `${BASE}/folder/111`,
+		responses: {
+			[`${BASE}/app-api/enduserapp/folder/111`]: folderApi('All Files'),
+		},
+	};
+	const { result, context } = runInjection(page);
+	await result;
+	const again = vm.runInContext(source, context);
+	assert.deepEqual([...await again], ['All Files']);
+});
+
+test('parseBoxItemUrl', async t => {
+	const { context, result } = runInjection({ url: `${BASE}/recents` });
+	await assert.rejects(result);
+	const parse = url => {
+		const parsed = context.parseBoxItemUrl(url);
+		return parsed && { ...parsed };
+	};
+	await t.test('item pages', () => {
+		assert.deepEqual(parse('https://app.box.com/folder/0'), { origin: 'https://app.box.com', type: 'folder', id: '0' });
+		assert.deepEqual(parse(`${BASE}/notes/12?s=abc`), { origin: BASE, type: 'notes', id: '12' });
+		assert.deepEqual(parse(`${BASE}/integrations/officeonline/openOfficeOnline?fileId=34`), { origin: BASE, type: 'officeonline', id: '34' });
+	});
+	await t.test('other pages and hosts', () => {
+		assert.equal(parse(`${BASE}/recents`), null);
+		assert.equal(parse('https://app.box.com.example.com/folder/1'), null);
+		assert.equal(parse('http://app.box.com/folder/1'), null);
+	});
+});
+
+test('parseEmbeddedItem', async t => {
+	const { context, result } = runInjection({ url: `${BASE}/recents` });
+	await assert.rejects(result);
+	await t.test('reads parent folder and name of the first item', () => {
+		const item = context.parseEmbeddedItem('x = {"k":{"items":[{"parentFolderID":"1","name":"a.boxnote"}]}};');
+		assert.deepEqual({ ...item }, { folderId: '1', name: 'a.boxnote' });
+	});
+	await t.test('rejects scripts without the expected JSON', () => {
+		assert.throws(() => context.parseEmbeddedItem('no json here'), /Cannot slice embedded JSON/);
+		assert.throws(() => context.parseEmbeddedItem('x = {"k":{}};'), /Unexpected JSON structure/);
+	});
 });

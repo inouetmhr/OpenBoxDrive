@@ -1,6 +1,16 @@
 import { CONTEXT_MENU } from './context-menu.js';
 
-export const isBoxUrl = (url) => url && url.match(/(https:\/\/.*\.?app\.box\.com)/);
+// app.box.com or an enterprise subdomain such as example.app.box.com
+export const isBoxUrl = (url) => {
+	let parsed;
+	try {
+		parsed = new URL(url);
+	} catch {
+		return false;
+	}
+	return parsed.protocol === 'https:' &&
+		(parsed.hostname === 'app.box.com' || parsed.hostname.endsWith('.app.box.com'));
+};
 export const isFileUrl = (url) => url && url.startsWith('file://');
 
 // Paths copied from Explorer ("Copy as path") are wrapped in double quotes
