@@ -57,12 +57,6 @@ const setupDeclarativeContent = () => {
 // --- Lifecycle & Initialization ---
 
 chrome.runtime.onInstalled.addListener(details => {
-	if (details.reason === 'update') {
-		const updateRequiredPreviousVersions = ['0.0.1'];
-		if (updateRequiredPreviousVersions.includes(details.previousVersion)) {
-			chrome.tabs.create({ url: `${chrome.runtime.getManifest().options_page}#update-notification` });
-		}
-	}
 	if (details.reason === 'install') {
 		chrome.runtime.openOptionsPage();
 	}

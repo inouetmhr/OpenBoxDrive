@@ -1,34 +1,19 @@
 export const CONTEXT_MENU = {
 	PAGE: {
 		id: 'page',
-		description: chrome.i18n.getMessage('context_menu_page_description'),
 		defaultTitle: chrome.i18n.getMessage('context_menu_page_default_title'),
 	},
 	LINK: {
 		id: 'link',
-		description: chrome.i18n.getMessage('context_menu_link_description'),
 		defaultTitle: chrome.i18n.getMessage('context_menu_link_default_title'),
 	},
 	SELECTION: {
 		id: 'selection',
-		description: chrome.i18n.getMessage('context_menu_selection_description'),
 		defaultTitle: chrome.i18n.getMessage('context_menu_selection_default_title'),
 	},
 };
 
 const generateStorageKey = key => `contextMenus.title.${key}`;
-
-export const saveContextMenuTitle = (key, title) => {
-	return new Promise((resolve, reject) => {
-		if (!CONTEXT_MENU.hasOwnProperty(key)) {
-			return reject('Unsupported ContextMenu type');
-		}
-		const items = {
-			[generateStorageKey(key)]: title,
-		};
-		chrome.storage.local.set(items, resolve);
-	});
-};
 
 export const getContextMenuTitle = () => {
 	const keys = Object.keys(CONTEXT_MENU).map(generateStorageKey);
@@ -74,8 +59,4 @@ export const createContextMenu = () => {
 			id: CONTEXT_MENU.SELECTION.id,
 		});
 	});
-};
-
-export const updateContextMenu = () => {
-	chrome.contextMenus.removeAll(createContextMenu);
 };

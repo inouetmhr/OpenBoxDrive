@@ -1,11 +1,5 @@
 import common from '../common.js';
-import { zip, dl } from './zip.mjs';
-import {
-	CONTEXT_MENU,
-	saveContextMenuTitle,
-	getContextMenuTitle,
-	updateContextMenu,
-} from '../context-menu.js';
+import { zip } from './zip.mjs';
 
 {
 	const localeCode = chrome.i18n.getMessage('_locale_code');
@@ -25,7 +19,6 @@ console.log(`Setup is running for ${browser} on ${isMac ? 'MacOS' : isWindows ? 
 if (isMac) {
 	document.getElementById('prerequisite').style.display = 'none';
 	document.getElementById('install-instruction').innerHTML = "ターミナルで <code>sh setup.sh</code> を実行";
-	document.getElementById('manual-setup').style.display = 'none';
 	document.getElementById('filePathToOpen').value = '/Applications/';
     document.querySelectorAll('.os-shell').forEach(e => {
 		e.innerText = 'Finder';
@@ -103,71 +96,10 @@ const generateManifestJson = (nativeMessagingHostPath) => {
 	return JSON.stringify(value, replacer, space);
 };
 
-const generateRegistryInfo = (dirPath) => {
-	const filePath = `${dirPath.replace(/[\\/]$/, '')}/manifest.json`;
-	const key = `HKEY_CURRENT_USER/Software/${browser}/NativeMessagingHosts/${common.applicationName}`.replace(/[/]/g, '\\');
-	const value = filePath.replace(/[/]/g, '\\');
-	const regFileContent = `
-Windows Registry Editor Version 5.00
-
-[${key}]
-@="${value.replace(/[\\]/g, '\\\\')}"
-	`.trim();
-	return {
-		key,
-		value,
-		regFileContent,
-	};
-};
-
 {
-	// For manual setup on Windows: the .bat is saved in the same folder as manifest.json
-	const manifestJsonContent = generateManifestJson('native-messaging-host-app.bat');
-	const manifestBlob = new Blob([manifestJsonContent], {type: 'text/plain',});
-	const manifestLink = document.getElementById('manifest-json-download-link');
-	manifestLink.href = URL.createObjectURL(manifestBlob);
-
 	const setupZip = await generateSetupZip();
 	const zipLink = document.getElementById('setup-zip-download-link');
 	zipLink.href = URL.createObjectURL(setupZip);
-}
-
-{
-	/**
-	 * Convert a string to a Uint16Array for UTF-16
-	 * @param {String} str
-	 * @returns {Uint16Array}
-	 */
-	const convertToUtf16 = str => {
-		const codePointArray = Array.from(str).map(c => c.codePointAt(0));
-		// TODO: Supports surrogate pairs (if codePoint is greater than 0xFFFF)
-		return new Uint16Array(codePointArray);
-	};
-
-	const dirPath = document.getElementById('dirPath');
-	const downloadLinks = document.querySelectorAll('.reg-download-link');
-	downloadLinks.forEach(e => e.download = 'manifest.reg');
-	const update = () => {
-		const bom = '\uFEFF';
-		const registryInfo = generateRegistryInfo(dirPath.value || dirPath.placeholder);
-		const regFileContent = registryInfo.regFileContent;
-
-		const blob = new Blob([convertToUtf16(bom + regFileContent).buffer], {
-			type: 'text/plain',
-		});
-		downloadLinks.forEach(e => e.href = URL.createObjectURL(blob));
-
-		document.getElementById('reg-content').innerText = regFileContent;
-		document.getElementById('reg-key').innerText = registryInfo.key;
-		document.getElementById('reg-value').innerText = registryInfo.value;
-	};
-
-	dirPath.addEventListener('change', update);
-	dirPath.addEventListener('keyup', update);
-	dirPath.addEventListener('paste', () => {
-		setTimeout(update, 10);
-	});
-	update();
 }
 
 {
@@ -188,28 +120,5 @@ Windows Registry Editor Version 5.00
 		if (evt.key === 'Enter') {
 			execOpen();
 		}
-	});
-}
-
-{
-	const container = document.getElementById('context-menu-title-setting-container');
-
-	getContextMenuTitle().then(contextMenuTitle => {
-		Object.entries(contextMenuTitle).map(([key, currentTitle]) => {
-			const input = document.createElement('input');
-			input.value = currentTitle;
-			input.placeholder = CONTEXT_MENU[key].defaultTitle;
-			input.title = chrome.i18n.getMessage('press_enter_to_save');
-			input.addEventListener('keydown', evt => {
-				if (evt.key === 'Enter') {
-					saveContextMenuTitle(key, input.value).then(updateContextMenu);
-				}
-			});
-
-			const li = document.createElement('li');
-			li.append(CONTEXT_MENU[key].description);
-			li.append(input);
-			container.append(li);
-		});
 	});
 }

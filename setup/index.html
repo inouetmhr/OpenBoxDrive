@@ -17,50 +17,17 @@
 			padding: 5px;
 			margin: 5px;
 		}
-		pre {
-			width: 80%;
-			background-color: #f6f8fa;
-			padding: 16px;
-		}
 		button {
 			cursor: pointer;
 			padding: 5px;
 			border-radius: 5px;
 		}
-		[data-description]::before {
-			content: attr(data-description) ": ";
-			color:dimgray;
-		}
-		#update-notification {
-			background-color: orange;
-			padding: 30px;
-			font-size: 150%;
-			display: none;
-		}
-		#update-notification:target {
-			display: block;
-		}
 		ol > li {
 			margin-top:7px;
 		}
-
-		input[type='checkbox'] { display: none; } /*.wrap-collabsible { margin: 1.2rem 0; } */
-		.lbl-toggle { cursor: pointer; transition: all 0.25s ease-out; } 
-		.lbl-toggle:hover { color: #CCC; } 
-		.lbl-toggle::before { content: ' '; display: inline-block; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: 5px solid currentColor; vertical-align: middle; margin-right: .7rem; transform: translateY(-2px); transition: transform .2s ease-out; } 
-		.toggle:checked+.lbl-toggle::before { transform: rotate(90deg) translateX(-3px); } 
-		.collapsible-content { max-height: 0px; overflow: hidden; transition: max-height .25s ease-in-out; } 
-		.toggle:checked + .lbl-toggle + .collapsible-content { max-height: max-content; } 
-		/*.toggle:checked+.lbl-toggle { border-bottom-right-radius: 0; border-bottom-left-radius: 0; } */
-		/* .collapsible-content .content-inner { background: rgba(0, 105, 255, .2); border-bottom: 1px solid rgba(0, 105, 255, .45); border-bottom-left-radius: 7px; border-bottom-right-radius: 7px; padding: .5rem 1rem; }  */
-		.collapsible-content p { margin-bottom: 0; }
 	</style>
 </head>
 <body>
-	<div id="update-notification">
-		<span lang="en">The extension has been updated. Please reconfigure it.</span>
-		<span lang="ja">拡張機能が更新されました。再設定をお願いします。</span>
-	</div>
 	<h1>
 		<span lang="en">Initialization</span><span lang="ja">初期設定</span>
 	</h1>
@@ -87,72 +54,6 @@
 		<li><a id="setup-zip-download-link" download="nativehost-setup.zip">nativehost-setup.zip</a></li>
 	</ul>
 
-	<div class="wrap-collabsible" id="manual-setup"> <!-- manual setup -->
-		<input id="collapsible" class="toggle" type="checkbox">
-		<label for="collapsible" class="lbl-toggle"> (Option)
-			<span lang="en"> In case of manual setup:</span>
-			<span lang="ja"> 手動設定する場合:</span>
-		</label>
-		<div class="collapsible-content">
-			<div class="content-inner">
-				<ol>
-					<li>
-						<span lang="en">Create a folder in a suitable location that will not be deleted.<br>
-							※ If the folder disappears due to deletion or movement, this initial setup needs to be
-							re-enforced.</span>
-						<span lang="ja">適当な場所にフォルダを作成する<br>
-							※ フォルダが削除や移動によって存在しなくなると本初期設定の再実施が必要</span>
-					</li>
-					<li>
-						<span lang="en">Path to the folder you created (required):</span>
-						<span lang="ja">作成したフォルダのpathを以下に入力（必須）</span>
-						<br>
-						<input id="dirPath" placeholder="C:\path\to">
-					</li>
-					<li>
-						<span lang="en">Save the following files in the folder you just created.</span>
-						<span lang="ja">以下のファイルを作成したフォルダに保存<br>
-							※ダウンロードブロックされる場合、別の拡張子として「名前を付けて保存」してからリネームする</span>
-						<ul>
-							<li>
-								<a id="manifest-json-download-link" download="manifest.json">manifest.json</a>
-							</li>
-							<li>
-								<a href="/host-app-src/native-messaging-host-app.bat"
-									download="native-messaging-host-app.bat">native-messaging-host-app.bat</a>
-							</li>
-							<li>
-								<a href="/host-app-src/native-messaging-host-app.py"
-									download="native-messaging-host-app.py">native-messaging-host-app.py</a>
-							</li>
-						</ul>
-					</li>
-					<li>
-						<span lang="en">Registry file generation, perform registry edition either from manual edition OR
-							from launching the generated file :</span>
-						<span lang="ja">レジストリ登録</span>
-						<ul>
-							<li style="display: none;">
-								<span lang="en">(ADVANCED users only) Manual configuration from the registry editor.</span>
-								<span lang="ja">レジストリエディターから以下を手動で設定、あるいは </span>
-								<pre data-description="Key"><code id="reg-key"></code></pre>
-								<pre data-description="Value"><code id="reg-value"></code></pre>
-							</li>
-							<li>
-								<span lang="en">(PREFERRED solution) Download the generated <a
-										class="reg-download-link">Registry registration file</a> and launch it
-									(double-click).</span>
-								<span lang="ja"><a class="reg-download-link">レジストリ登録ファイルをダウンロード</a> して実行。<br>
-									あるいは以下の内容を手動で登録</span><br>
-								<pre><code id="reg-content"></code></pre>
-							</li>
-						</ul>
-					</li>
-				</ol>
-			</div>
-		</div>
-	</div>
-
 	<h2>
 		<span lang="en">2. Confirm the setup</span>
 		<span lang="ja">2. 動作確認</span>
@@ -173,15 +74,9 @@
 		</ol>
 	<hr>
 	<h1>
-		<span lang="en">Change the context menu title</span>
+		<span lang="en">Usage</span>
 		<span lang="ja">使い方</span>
 	</h1>
-	<p style="display: none;">
-		<span lang="en">For keyboard shortcuts<br>
-		※ Press Enter to save.</span>
-		<span lang="ja">キーボードショートカット用 ※Enterで保存</span>
-	</p>
-	<ul id="context-menu-title-setting-container" style="display: none;"></ul>
 	<script type="module" src="./main.js"></script>
 	<p>
 		<a href="https://app.box.com/folder/0" target="_blank">Boxのフォルダあるいはファイルのページ</a>を開いている状態で、
