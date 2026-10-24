@@ -43,7 +43,7 @@ Box の Web ページで見ているフォルダやファイルを、Box Drive �
 拡張機能を削除したあとは、これらを消せばヘルパーもなくなります。
 
 ## プライバシー
-本拡張機能は情報を外部に送信しません。詳しくは [PrivacyPolicy.md](PrivacyPolicy.md) を参照してください。
+本拡張機能は、開発者や第三者に情報を送信しません。Box のフォルダの階層を調べるときに、開いている Box のサイトに問い合わせるだけです。詳しくは [PrivacyPolicy.md](PrivacyPolicy.md) を参照してください。
 
 ## 開発: テスト
 外部依存なし（Node.js 18+ の `node:test` と Python 標準の `unittest`）で動きます。
