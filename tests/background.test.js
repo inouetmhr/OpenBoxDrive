@@ -16,27 +16,38 @@ let nativeMessages;
 let nativeReply;
 let injection;
 let optionsPageOpened;
-let toasts;
+let popups;
 let badges;
-let scriptable;
+let popupAvailable;
+let actionPopup;
 
 const badge = (key, field) => async options => {
 	badges[options.tabId] = { ...badges[options.tabId], [key]: options[field] };
 };
+let storedFeedback;
+chrome.storage = { session: { set: async items => { storedFeedback = items.feedback; } } };
+chrome.tabs = { get: async tabId => ({ id: tabId, windowId: 7 }) };
 chrome.action = {
 	onClicked: event('action.onClicked'),
 	setBadgeText: badge('text', 'text'),
 	setBadgeBackgroundColor: badge('color', 'color'),
 	setTitle: badge('title', 'title'),
+	setPopup: async ({ tabId, popup }) => { actionPopup[tabId] = popup; },
+	openPopup: async ({ windowId }) => {
+		if (!popupAvailable) throw new Error('Could not find an active browser window.');
+		assert.equal(windowId, 7);
+		popups.push({ ...storedFeedback, popup: Object.values(actionPopup).find(Boolean) });
+	},
 };
 
 beforeEach(() => {
 	nativeMessages = [];
 	nativeReply = { response: { resultCode: 'directory_opened', path: 'opened' } };
 	optionsPageOpened = 0;
-	toasts = [];
+	popups = [];
 	badges = {};
-	scriptable = true;
+	actionPopup = {};
+	popupAvailable = true;
 	chrome.runtime.openOptionsPage = () => { optionsPageOpened++; };
 	chrome.runtime.sendNativeMessage = (name, message, callback) => {
 		nativeMessages.push(message);
@@ -45,12 +56,9 @@ beforeEach(() => {
 		delete chrome.runtime.lastError;
 	};
 	chrome.scripting = {
-		executeScript: async ({ files, func, args }) => {
-			if (!scriptable) throw new Error('Cannot access contents of the page.');
-			if (files) return injection();
-			assert.equal(func.name, 'showToast');
-			toasts.push({ title: args[0], detail: args[1] });
-			return [];
+		executeScript: async ({ files }) => {
+			assert.deepEqual(files, ['box-injection.js'], 'nothing else is injected into pages');
+			return injection();
 		},
 	};
 });
@@ -68,65 +76,67 @@ test('box page: opens the path found by box-injection.js without any message', a
 	injection = () => [{ result: { ok: true, path: ['All Files', 'Team'] } }];
 	await clickAction({ url: 'https://app.box.com/folder/1' });
 	assert.deepEqual(nativeMessages, [{ boxPath: ['All Files', 'Team'] }]);
-	assert.deepEqual(toasts, []);
+	assert.deepEqual(popups, []);
 	assert.equal(badges[1].text, '', 'busy badge is cleared');
 });
 
-test('box page: shows the reason in the page when box-injection.js fails', async () => {
+test('box page: shows the reason in the popup when box-injection.js fails', async () => {
 	injection = () => [{ result: { ok: false, reason: 'unsupported_page', detail: 'https://app.box.com/recents' } }];
 	await clickAction({ url: 'https://app.box.com/recents' });
 	assert.deepEqual(nativeMessages, []);
-	assert.deepEqual(toasts, [{ title: 'result_unsupported_page', detail: 'https://app.box.com/recents' }]);
+	assert.deepEqual(popups.map(({ title, detail }) => ({ title, detail })), [{ title: 'result_unsupported_page', detail: 'https://app.box.com/recents' }]);
 });
 
-test('box page: shows a toast when the script cannot be injected or returns nothing', async () => {
+test('box page: shows the popup when the script cannot be injected or returns nothing', async () => {
 	injection = () => { throw new Error('Frame with ID 0 was removed.'); };
 	await clickAction({ url: 'https://app.box.com/folder/1' });
 	injection = () => [];
 	await clickAction({ url: 'https://app.box.com/folder/1' });
-	assert.deepEqual(toasts.map(t => t.title), ['result_box_lookup_failed', 'result_box_lookup_failed']);
-	assert.equal(toasts[0].detail, 'Frame with ID 0 was removed.');
+	assert.deepEqual(popups.map(t => t.title), ['result_box_lookup_failed', 'result_box_lookup_failed']);
+	assert.equal(popups[0].detail, 'Frame with ID 0 was removed.');
 });
 
-test('box page: shows a toast when the item is not in Box Drive yet', async () => {
+test('box page: shows the popup when the item is not in Box Drive yet', async () => {
 	injection = () => [{ result: { ok: true, path: ['All Files', 'New'] } }];
 	nativeReply = { response: { resultCode: 'does_not_exist', path: 'C:\\Users\\me\\Box\\New' } };
 	await clickAction({ url: 'https://app.box.com/folder/1' });
-	assert.deepEqual(toasts, [{ title: 'result_does_not_exist', detail: 'C:\\Users\\me\\Box\\New' }]);
+	assert.deepEqual(popups.map(({ title, detail }) => ({ title, detail })), [{ title: 'result_does_not_exist', detail: 'C:\\Users\\me\\Box\\New' }]);
 });
 
 test('file url: opens the local path', async () => {
 	await clickAction({ url: 'file:///C:/ProgramData/' });
 	assert.deepEqual(nativeMessages, [{ filePath: 'C:\\ProgramData\\' }]);
-	assert.deepEqual(toasts, []);
+	assert.deepEqual(popups, []);
 });
 
-test('other pages: the icon stays clickable and explains itself in a toast', async () => {
+test('other pages: the icon stays clickable and explains itself in the popup, without injecting', async () => {
 	await clickAction({ url: 'https://example.com/' });
 	assert.deepEqual(nativeMessages, []);
-	assert.deepEqual(toasts, [{ title: 'result_unsupported_page', detail: 'https://example.com/' }]);
+	assert.deepEqual(popups, [{ title: 'result_unsupported_page', detail: 'https://example.com/', popup: 'feedback-popup.html' }]);
+	assert.equal(actionPopup[1], '', 'the next click runs the action again');
 });
 
-test('pages that cannot be scripted get a badge with the reason as tooltip', async () => {
-	scriptable = false;
+test('without openPopup the reason goes on the icon badge and tooltip', async () => {
+	popupAvailable = false;
 	await clickAction({ url: 'chrome://newtab/' });
-	assert.deepEqual(toasts, []);
+	assert.deepEqual(popups, []);
 	assert.equal(badges[1].text, '!');
 	assert.equal(badges[1].title, 'result_unsupported_page\nchrome://newtab/');
+	assert.equal(actionPopup[1], '');
 });
 
-test('context menu: shows a toast when the link is not a local file', async () => {
+test('context menu: shows the popup when the link is not a local file', async () => {
 	listeners['contextMenus.onClicked']({ menuItemId: 'link', linkUrl: 'https://example.com/' }, { id: 2 });
 	await settle();
 	assert.deepEqual(nativeMessages, []);
-	assert.deepEqual(toasts, [{ title: 'result_not_a_file_path', detail: 'https://example.com/' }]);
+	assert.deepEqual(popups.map(({ title, detail }) => ({ title, detail })), [{ title: 'result_not_a_file_path', detail: 'https://example.com/' }]);
 });
 
-test('opens the setup page instead of a toast when the native host cannot be reached', async () => {
+test('opens the setup page instead of a message when the native host cannot be reached', async () => {
 	nativeReply = { lastError: { message: 'Specified native messaging host not found.' } };
 	await clickAction({ url: 'file:///C:/ProgramData/' });
 	assert.equal(optionsPageOpened, 1);
-	assert.deepEqual(toasts, []);
+	assert.deepEqual(popups, []);
 });
 
 test('opens the setup page when the native host is too old to understand the request', async () => {
