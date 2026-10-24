@@ -84,8 +84,6 @@ chrome.runtime.onInstalled.addListener(async details => {
 		chrome.runtime.openOptionsPage();
 	}
 	if (details.reason === 'update') {
-		// Older versions kept user-renamed context menu titles here, the only thing they stored
-		chrome.storage.local.clear();
 		// An update may need a newer helper than the one installed
 		const status = diagnoseHost(await common.requestNativeHost({ ping: true }), common.REQUIRED_HOST_VERSION);
 		if (['host_outdated', 'host_failed'].includes(status.state)) {
