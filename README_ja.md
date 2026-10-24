@@ -1,15 +1,49 @@
 ( [English](README.md) / **日本語(Japanese)** )
 
-# Chrome/Edge拡張: Open in Box Drive
+# Open Box Drive（Chrome / Edge 拡張機能）
+
+Box の Web ページで見ているフォルダやファイルを、Box Drive のフォルダとして Explorer（Windows）や Finder（macOS）で開きます。
 
 ## 機能
-- ブラウザの拡張機能ボタンをクリックすると、その時Boxで開いているページに対応したフォルダーをExplorer (Box Drive) で開きます
-- ブラウザで開いているのがファイルの場合、ファイルを選択した状態で親フォルダをExplorerで開きます
+- Box のフォルダのページでツールバーのアイコンをクリックすると、そのフォルダを Box Drive で開きます。
+- ファイルのページでは、そのファイルを選択した状態で親フォルダを開きます。
+- 対応しているページ: フォルダ、ファイル、Box Notes、Box Canvas、Office Online で開いているファイル
+- キーボードショートカット: Windows は `Ctrl+Shift+B`、macOS は `⌘⇧B`（ブラウザの拡張機能の設定で変更できます）
+- 開けなかったときは、アイコンの下に理由を表示します。開けたときは何も表示しません（Explorer / Finder のウインドウが開くことが結果です）。
+- その他の機能
+  - `file:` のページでアイコンをクリックすると、そのフォルダやファイルを開きます。
+  - `file:` のリンクや、選択したパスの文字列（`C:\...`、`\\server\...`、`/Users/...` など）を右クリックメニューから開けます。前後の `"` は無視します。
 
-## インストール
-- 通常のブラウザ拡張では Explorer を開くようなローカル環境に対する操作はできないため、ブラウザ拡張からの指示で動くローカルプロセス (native messaging host) のインストールが必要です。
-- このため拡張機能のインストール時に表示されるセットアップ画面（拡張機能のオプション画面）の指示のとおり、Pythonのインストールおよびローカルプロセスのインストールが動作には必須です
-- ローカルプロセスの Manifest には、拡張機能のユニークIDの埋め込みが必要なため、本拡張機能をフォルダからインストールしている場合、インストールするたびに上記のセットアップ（特にローカルプロセス用Manifestの更新）が必要です。何度もインストールし直した場合には注意してください。
+## 動作環境
+- Windows または macOS（Box Drive が使える OS のみ）
+- Box Drive がインストールされ、サインインしていること
+- Google Chrome または Microsoft Edge
+- Windows: Python 3（[python.org](https://www.python.org/downloads/) のインストーラーで入れたもの）
+- macOS: `/usr/bin/python3`（初回にコマンドライン・デベロッパ・ツールのインストールを求められたらインストールしてください）
+
+## セットアップ
+ブラウザの拡張機能だけでは Explorer や Finder を開けないため、拡張機能から呼び出される小さなヘルパー（native messaging host）をパソコンに入れます。
+
+1. 拡張機能をインストールすると、設定画面が開きます（後からは拡張機能の「オプション」で開けます）。
+2. 設定画面がヘルパーの状態を自動で調べ、次にやることを表示します。
+   - Windows: `nativehost-setup.zip` をダウンロードして展開し、中の `setup.bat` を実行します。
+   - macOS: `open-box-drive-setup.sh` をダウンロードし、ターミナルで `sh` に続けてファイルをドラッグして実行します。
+3. セットアップが終わると、設定画面が自動で「準備完了」に変わります。
+
+次の場合はセットアップをやり直す必要があります。どちらも設定画面やツールバーのアイコンが知らせます。
+- 拡張機能の ID が変わったとき（入れ直したときや、別のフォルダから読み込んだとき）
+- 拡張機能の更新で、新しいヘルパーが必要になったとき
+
+### ヘルパーのインストール先と削除方法
+| | ファイル | ブラウザへの登録 |
+|---|---|---|
+| Windows | `%LOCALAPPDATA%\OpenBoxDrive\NativeHost` | レジストリ `HKCU\Software\Microsoft\Edge\NativeMessagingHosts\com.github.inouetmhr.open_box_drive`（Chrome は `Google\Chrome`） |
+| macOS | `~/Library/Application Support/OpenBoxDrive` | `~/Library/Application Support/Microsoft Edge/NativeMessagingHosts/com.github.inouetmhr.open_box_drive.json`（Chrome は `Google/Chrome`） |
+
+拡張機能を削除したあとは、これらを消せばヘルパーもなくなります。
+
+## プライバシー
+本拡張機能は情報を外部に送信しません。詳しくは [PrivacyPolicy.md](PrivacyPolicy.md) を参照してください。
 
 ## 開発: テスト
 外部依存なし（Node.js 18+ の `node:test` と Python 標準の `unittest`）で動きます。
@@ -18,9 +52,17 @@
 npm test
 ```
 
-- `tests/path-utils.test.js`: URL→ファイルパス変換・右クリックメニューのパス抽出
-- `tests/box-injection.test.js`: Box ページからのパス解決（DOM と fetch をスタブ化して `box-injection.js` を実行）
-- `tests/test_native_host.py`: ネイティブホスト（パス組み立て、Explorer/Finder 呼び出し、stdio プロトコル）
+| テスト | 対象 |
+|---|---|
+| `tests/box-injection.test.js` | Box のページからのパスの取得（DOM と fetch を差し替えて `box-injection.js` を実行） |
+| `tests/background.test.js` | アイコンや右クリックメニューを押したときの動き、エラー表示、設定画面を開く条件 |
+| `tests/status.test.js` | 設定画面の状態判定（ブラウザのエラーメッセージ → 次にやること） |
+| `tests/installer.test.js` | セットアップファイルの生成（macOS では生成した `.sh` を仮のホームディレクトリで実際に実行） |
+| `tests/test_native_host.py` | ヘルパー（パスの組み立て、Explorer / Finder の呼び出し、`ping`、stdio のやり取り） |
+| `tests/path-utils.test.js`、`tests/context-menu.test.js`、`tests/common.test.js` | URL とパスの変換、メニューの表記、ヘルパーとの通信 |
+| `tests/setup-templates.test.js`、`tests/package.test.js` | セットアップのテンプレートと設定画面の HTML、ストア提出用パッケージの中身 |
+
+ヘルパーとの間のメッセージ形式を変えるときは、インストール済みの古いヘルパーとも動くようにしてください。ヘルパーは利用者がセットアップをやり直すまで更新されません。新しいヘルパーが必要になったら、`host-app-src/native-messaging-host-app.py` の `HOST_VERSION` と `common.js` の `REQUIRED_HOST_VERSION` を一緒に上げます。
 
 ## 開発: ストア提出用パッケージ
 ```bash
@@ -72,40 +114,6 @@ API や埋め込み JSON の形が変わった場合は、`fetchFolderPath` や 
 - PetitZip ライブラリ https://github.com/McbeEringi/petit/blob/main/docs/zip.md を `setup/zip.mjs` として同梱しています
 
 ## 謝辞
-これは以下の拡張機能のforkです。
+これは以下の拡張機能の fork です。`file:` のページ・リンク・選択文字列を開く機能は、この拡張機能から引き継いでいます。
   - https://chrome.google.com/webstore/detail/open-local-folder-by-expl/ehidkllolkmedbkjbdkcgabdadcfppfg?hl=ja
   - https://github.com/tksugimoto/chrome-extension_open-local-folder-by-explorer
-
-このため、以下の機能もそのまま引き継いでいます。
-
----
-
-### 機能
-- フォルダをExplorerで開く
-- （ファイルの場合）ファイルを選択した状態で親フォルダをExplorerで開く
-
-
-### 対象可能なフォルダ・ファイル
-- 現在のタブ（URLが `file://` 始まりの場合）
-- リンク先URL（URLが `file://` 始まりの場合）
-- 選択文字列（選択文字列が `C:\`, `\\ComputerName\` などで始まる場合）
-    - 先頭と末尾の `"` （ダブルクォーテーション）は無視する（先頭末尾両方に存在する場合のみ）
-
-### 使い方
-1. 拡張をインストール
-1. インストール時に開かれる `設定` タブに従って設定する
-    - 再設定が必要な場合は、拡張のオプションページから可能
-1. 以下のいずれかを実施
-    - ローカルファイル・フォルダを開いているタブでこの拡張のアイコンをクリック
-    - ページ・リンク・選択テキストの右クリックメニューから「～～をExplorerで開く」を選択
-        - フォルダをExplorerで開く
-        - リンク先をExplorerで開く（ローカルファイルの場合）
-        - 選択文字列をExplorerで開く（ローカルファイルパスの場合）
-
-#### 右クリックメニューのタイトル変更
-##### メリット
-アルファベット始まりに変更するとキーボードで選択が可能
-
-##### 変更方法
-1. 設定ページ（オプションページ）を開く
-1. `右クリックメニュータイトル変更` 部分で右クリックメニューの種類ごとに新タイトルを設定
