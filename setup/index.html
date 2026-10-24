@@ -362,20 +362,22 @@
 						</button>
 					</p>
 					<p class="result" id="open-result" role="status"></p>
-					<details data-os="windows">
+					<details>
 						<summary><span lang="en">Other features</span><span lang="ja">その他の機能</span></summary>
 						<ul>
 							<li>
-								<span lang="en">The icon also works on <code>file:</code> pages, such as <a href="file://C:/ProgramData/">file://C:/ProgramData/</a>.</span>
-								<span lang="ja"><code>file:</code> のページ（例: <a href="file://C:/ProgramData/">file://C:/ProgramData/</a>）でもアイコンで開けます。</span>
+								<span lang="en">The icon also works on <code>file:</code> pages, such as
+									<a data-os="windows" href="file:///C:/ProgramData/">file:///C:/ProgramData/</a><a data-os="mac" href="file:///Applications/">file:///Applications/</a>.</span>
+								<span lang="ja"><code>file:</code> のページ（例:
+									<a data-os="windows" href="file:///C:/ProgramData/">file:///C:/ProgramData/</a><a data-os="mac" href="file:///Applications/">file:///Applications/</a>）でもアイコンで開けます。</span>
 							</li>
 							<li>
-								<span lang="en">Right-click a <code>file:</code> link to open it in Explorer.</span>
-								<span lang="ja"><code>file:</code> のリンクを右クリックして Explorer で開けます。</span>
+								<span lang="en">Right-click a <code>file:</code> link to open it in <span class="os-shell"></span>.</span>
+								<span lang="ja"><code>file:</code> のリンクを右クリックして <span class="os-shell"></span> で開けます。</span>
 							</li>
 							<li>
-								<span lang="en">Select a path such as <code>C:\ProgramData\</code> and right-click to open it in Explorer.</span>
-								<span lang="ja"><code>C:\ProgramData\</code> のようなパスを選択して右クリックしても Explorer で開けます。</span>
+								<span lang="en">Select a path such as <code data-os="windows">C:\ProgramData\</code><code data-os="mac">/Applications/</code> and right-click to open it in <span class="os-shell"></span>.</span>
+								<span lang="ja"><code data-os="windows">C:\ProgramData\</code><code data-os="mac">/Applications/</code> のようなパスを選択して右クリックしても <span class="os-shell"></span> で開けます。</span>
 							</li>
 						</ul>
 					</details>
