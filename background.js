@@ -97,8 +97,9 @@ chrome.runtime.onStartup.addListener(createContextMenu);
 
 // --- User Actions ---
 
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-	const extractResult = extractFilePath(info);
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+	const { os } = await chrome.runtime.getPlatformInfo();
+	const extractResult = extractFilePath(info, os);
 	if (!extractResult.isSucceeded) {
 		showError(tab?.id, 'not_a_file_path', extractResult.target);
 		return;
@@ -139,7 +140,8 @@ async function clickedAction(tab) {
 		return { result: "handled" };
 	}
 	if (isFileUrl(tab.url)) {
-		sendToHost(tab.id, { filePath: convertUrl2FilePath(tab.url) });
+		const { os } = await chrome.runtime.getPlatformInfo();
+		sendToHost(tab.id, { filePath: convertUrl2FilePath(tab.url, os) });
 		return { result: "handled" };
 	}
 	return { result: "unsupported" };

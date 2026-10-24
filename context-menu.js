@@ -1,36 +1,39 @@
+// Default titles are messages with $1 for the file manager's name
 export const CONTEXT_MENU = {
 	PAGE: {
 		id: 'page',
-		defaultTitle: chrome.i18n.getMessage('context_menu_page_default_title'),
+		defaultTitleMessage: 'context_menu_page_default_title',
 	},
 	LINK: {
 		id: 'link',
-		defaultTitle: chrome.i18n.getMessage('context_menu_link_default_title'),
+		defaultTitleMessage: 'context_menu_link_default_title',
 	},
 	SELECTION: {
 		id: 'selection',
-		defaultTitle: chrome.i18n.getMessage('context_menu_selection_default_title'),
+		defaultTitleMessage: 'context_menu_selection_default_title',
 	},
 };
 
+// What the native host opens folders in
+export const fileManagerName = os => os === 'mac' ? 'Finder' : 'Explorer';
+
 const generateStorageKey = key => `contextMenus.title.${key}`;
 
-export const getContextMenuTitle = () => {
+// Titles saved by older versions, which let users rename the menus, still take precedence
+export const getContextMenuTitle = async () => {
 	const keys = Object.keys(CONTEXT_MENU).map(generateStorageKey);
-	return new Promise(resolve => {
-		chrome.storage.local.get(keys, items => {
-			const contextMenuTitlePair = Object.entries(CONTEXT_MENU).map(([key, { defaultTitle }]) => {
-				const storageKey = generateStorageKey(key);
-				const title = items[storageKey] || defaultTitle;
-				return [
-					key,
-					title,
-				];
-			});
-			const contextMenuTitle = Object.fromEntries(contextMenuTitlePair);
-			resolve(contextMenuTitle);
-		});
+	const [items, { os }] = await Promise.all([
+		chrome.storage.local.get(keys),
+		chrome.runtime.getPlatformInfo(),
+	]);
+	const contextMenuTitlePair = Object.entries(CONTEXT_MENU).map(([key, { defaultTitleMessage }]) => {
+		const title = items[generateStorageKey(key)] || chrome.i18n.getMessage(defaultTitleMessage, fileManagerName(os));
+		return [
+			key,
+			title,
+		];
 	});
+	return Object.fromEntries(contextMenuTitlePair);
 };
 
 export const createContextMenu = () => {

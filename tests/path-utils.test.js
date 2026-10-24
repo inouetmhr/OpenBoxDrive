@@ -50,6 +50,9 @@ test('convertUrl2FilePath', async t => {
 	await t.test('strips hash fragment', () => {
 		assert.equal(convertUrl2FilePath('file:///C:/doc.pdf#page=12'), 'C:\\doc.pdf');
 	});
+	await t.test('macOS keeps the POSIX path', () => {
+		assert.equal(convertUrl2FilePath('file:///Users/me/a%20b/%E3%81%82.txt#x', 'mac'), '/Users/me/a b/あ.txt');
+	});
 	await t.test('UNC path', () => {
 		assert.equal(convertUrl2FilePath('file://server/share/dir'), '\\\\server\\share\\dir');
 	});
@@ -65,7 +68,11 @@ test('extractFilePath', async t => {
 		const result = extractFilePath({ menuItemId: 'link', linkUrl: 'file:///C:/x/y.txt' });
 		assert.equal(result.path, 'C:\\x\\y.txt');
 	});
-	await t.test('link menu rejects non-file links', () => {
+	await t.test('page and link menus use the path format of the OS', () => {
+		assert.equal(extractFilePath({ menuItemId: 'page', pageUrl: 'file:///Users/me/' }, 'mac').path, '/Users/me/');
+		assert.equal(extractFilePath({ menuItemId: 'link', linkUrl: 'file:///Users/me/a.txt' }, 'mac').path, '/Users/me/a.txt');
+	});
+		await t.test('link menu rejects non-file links', () => {
 		const result = extractFilePath({ menuItemId: 'link', linkUrl: 'https://example.com/' });
 		assert.equal(result.isSucceeded, false);
 		assert.equal(result.target, 'https://example.com/');

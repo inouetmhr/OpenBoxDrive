@@ -40,12 +40,30 @@
 		"message": "The folder is opened with the files."
 	},
 	"context_menu_page_default_title": {
-		"message": "Open folder in Explorer"
+		"message": "Open folder in $SHELL$",
+		"placeholders": {
+			"shell": {
+				"content": "$1",
+				"example": "Explorer"
+			}
+		}
 	},
 	"context_menu_link_default_title": {
-		"message": "Open the link destination in Explorer (for local files)"
+		"message": "Open the link destination in $SHELL$ (for local files)",
+		"placeholders": {
+			"shell": {
+				"content": "$1",
+				"example": "Explorer"
+			}
+		}
 	},
 	"context_menu_selection_default_title": {
-		"message": "Open the selected string in Explorer (for local file path)"
+		"message": "Open the selected string in $SHELL$ (for local file path)",
+		"placeholders": {
+			"shell": {
+				"content": "$1",
+				"example": "Explorer"
+			}
+		}
 	}
 }

@@ -33,10 +33,11 @@ export class ExtractResult {
 	}
 }
 
-export const extractFilePath = info => {
+// os is chrome.runtime.getPlatformInfo().os: 'mac', 'win', ...
+export const extractFilePath = (info, os) => {
 	if (info.menuItemId === CONTEXT_MENU.PAGE.id) {
 		const pageUrl = info.pageUrl;
-		return new ExtractResult(pageUrl, convertUrl2FilePath(pageUrl));
+		return new ExtractResult(pageUrl, convertUrl2FilePath(pageUrl, os));
 	}
 	if (info.menuItemId === CONTEXT_MENU.LINK.id) {
 		const linkUrl = info.linkUrl;
@@ -44,7 +45,7 @@ export const extractFilePath = info => {
 			// link 要素用の右クリックメニューの表示対象を <all_urls> にしているため fileスキーマ以外を無視する
 			return ExtractResult.ofFailure(linkUrl);
 		}
-		return new ExtractResult(linkUrl, convertUrl2FilePath(linkUrl));
+		return new ExtractResult(linkUrl, convertUrl2FilePath(linkUrl, os));
 	}
 	if (info.menuItemId === CONTEXT_MENU.SELECTION.id) {
 		const selectionText = info.selectionText;
@@ -52,10 +53,14 @@ export const extractFilePath = info => {
 	}
 };
 
-export const convertUrl2FilePath = encodedUrl => {
+export const convertUrl2FilePath = (encodedUrl, os = 'win') => {
 	// 1. Remove hash (e.g., #page=12 for PDF pages)
 	// 2. Use decodeURIComponent instead of decodeURI for %23 to # conversion
 	const decodedURI = decodeURIComponent(encodedUrl.replace(/#.*/, ''));
+	if (os === 'mac') {
+		// file:///Users/me/a.txt -> /Users/me/a.txt
+		return decodedURI.replace(/^file:\/\//, '');
+	}
 	if (decodedURI.startsWith('file:///')) {
 		return decodedURI.replace(/^file:\/\/\//, '').replace(/\//g, '\\');
 	}

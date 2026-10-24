@@ -40,12 +40,30 @@
 		"message": "ファイルのあるフォルダを開きました"
 	},
 	"context_menu_page_default_title": {
-		"message": "フォルダをExplorerで開く"
+		"message": "フォルダを$SHELL$で開く",
+		"placeholders": {
+			"shell": {
+				"content": "$1",
+				"example": "Explorer"
+			}
+		}
 	},
 	"context_menu_link_default_title": {
-		"message": "リンク先をExplorerで開く（ローカルファイルの場合）"
+		"message": "リンク先を$SHELL$で開く（ローカルファイルの場合）",
+		"placeholders": {
+			"shell": {
+				"content": "$1",
+				"example": "Explorer"
+			}
+		}
 	},
 	"context_menu_selection_default_title": {
-		"message": "選択文字列をExplorerで開く（ローカルファイルパスの場合）"
+		"message": "選択文字列を$SHELL$で開く（ローカルファイルパスの場合）",
+		"placeholders": {
+			"shell": {
+				"content": "$1",
+				"example": "Explorer"
+			}
+		}
 	}
 }
