@@ -7,13 +7,25 @@ import {
 	convertUrl2FilePath,
 } from './path-utils.js';
 import { diagnoseHost } from './setup/status.js';
+import { showBusy, clearFeedback, showError } from './feedback.js';
 
-// Send to the native host; when it is missing or too old, open the setup page, which tells what to do
-const sendToHost = async message => {
-	const result = await common.sendNativeRequest(message);
-	if (['native_host_error', 'bad_request'].includes(result?.resultCode)) {
-		chrome.runtime.openOptionsPage();
+const OPENED = ['directory_opened', 'file_opened'];
+// The setup page tells what to do about these, so open it instead of showing an error
+const SETUP_PROBLEMS = ['native_host_error', 'bad_request'];
+
+const sendToHost = async (tabId, message) => {
+	showBusy(tabId);
+	const result = await common.requestNativeHost(message);
+	if (OPENED.includes(result?.resultCode)) {
+		clearFeedback(tabId);
+		return;
 	}
+	if (SETUP_PROBLEMS.includes(result?.resultCode)) {
+		clearFeedback(tabId);
+		chrome.runtime.openOptionsPage();
+		return;
+	}
+	showError(tabId, result?.resultCode, result?.path);
 };
 
 // --- Setup declarativeContent Rule ---
@@ -85,26 +97,20 @@ chrome.runtime.onStartup.addListener(createContextMenu);
 
 // --- User Actions ---
 
-chrome.contextMenus.onClicked.addListener((info) => {
+chrome.contextMenus.onClicked.addListener((info, tab) => {
 	const extractResult = extractFilePath(info);
 	if (!extractResult.isSucceeded) {
-		common.showNotification({
-			resultCode: 'not_a_file_path',
-			path: extractResult.target,
-		});
+		showError(tab?.id, 'not_a_file_path', extractResult.target);
 		return;
 	}
-	sendToHost({ filePath: extractResult.path });
+	sendToHost(tab?.id, { filePath: extractResult.path });
 });
 
 chrome.action.onClicked.addListener(async (tab) => {
 	console.info("onClicked on: " + tab.url);
 	const result = await clickedAction(tab);
 	if (result.result === "unsupported") {
-		common.showNotification({
-			resultCode: 'unsupported_page',
-			path: tab.url,
-		});
+		showError(tab.id, 'unsupported_page', tab.url);
 	}
 });
 
@@ -115,6 +121,8 @@ async function clickedAction(tab) {
 	console.info("onclick message on tab: " + tab.url);
 
 	if (isBoxUrl(tab.url)) {
+		// Reading the Box page and waiting for Box Drive to sync can take seconds
+		showBusy(tab.id);
 		let injection;
 		try {
 			[injection] = await chrome.scripting.executeScript({
@@ -124,28 +132,25 @@ async function clickedAction(tab) {
 		} catch (e) {
 			// e.g. the tab navigated away or the page cannot be scripted
 			console.error(e);
-			common.showNotification({ resultCode: 'box_lookup_failed', path: e.message });
+			showError(tab.id, 'box_lookup_failed', e.message);
 			return { result: "handled" };
 		}
-		openBoxDrive(injection?.result);
+		openBoxDrive(tab.id, injection?.result);
 		return { result: "handled" };
 	}
 	if (isFileUrl(tab.url)) {
-		sendToHost({ filePath: convertUrl2FilePath(tab.url) });
+		sendToHost(tab.id, { filePath: convertUrl2FilePath(tab.url) });
 		return { result: "handled" };
 	}
 	return { result: "unsupported" };
 }
 
 // result is what box-injection.js returns: { ok: true, path } or { ok: false, reason, detail }
-function openBoxDrive(result) {
+function openBoxDrive(tabId, result) {
 	console.info("Box lookup result:", result);
 	if (result?.ok) {
-		sendToHost({ boxPath: result.path });
+		sendToHost(tabId, { boxPath: result.path });
 		return;
 	}
-	common.showNotification({
-		resultCode: result?.reason ?? 'box_lookup_failed',
-		path: result?.detail ?? '',
-	});
+	showError(tabId, result?.reason ?? 'box_lookup_failed', result?.detail ?? '');
 }

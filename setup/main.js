@@ -119,8 +119,7 @@ document.getElementById('copy-mac-command').addEventListener('click', () => {
 	const openResult = document.getElementById('open-result');
 	document.getElementById('open-box-drive').addEventListener('click', async () => {
 		openResult.textContent = '';
-		// Also notifies, which shows the user whether notifications reach them
-		const result = await common.sendNativeRequest({ boxPath: ['All Files'] });
+		const result = await common.requestNativeHost({ boxPath: ['All Files'] });
 		const succeeded = ['directory_opened', 'file_opened'].includes(result.resultCode);
 		openResult.dataset.status = succeeded ? 'ok' : 'error';
 		openResult.textContent = `${chrome.i18n.getMessage(`result_${result.resultCode}`) || result.resultCode}: ${result.path ?? ''}`;
