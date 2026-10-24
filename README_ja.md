@@ -29,6 +29,44 @@ npm run package
 
 `dist/open-box-drive-<version>.zip` を作ります。git 管理下のファイルから、テスト・スクリプト・README などの開発用ファイルを除いたものです（作業ツリーの内容が入ります）。
 
+## 開発: Box の画面が変わったとき
+
+Box の Web ページの作りに依存しているのは `box-injection.js` だけです。依存している箇所と、壊れたときの症状は次のとおりです。
+
+| 依存している箇所 | コード | 壊れたときの症状 |
+|---|---|---|
+| URL の形（`/file/<id>`、`/folder/<id>`、`/notes/`、`/canvas/`、`/integrations/officeonline/openOfficeOnline?fileId=` など） | `parseBoxItemUrl` | 普通のフォルダやファイルのページなのに「Boxのフォルダ・ファイルのページか…でのみ動作します」と出る |
+| ファイルのページの親フォルダへのリンク | `BOX_SELECTORS.fileParentFolderLink` | 「このBoxページのフォルダを特定できませんでした」、詳細が `Failed to resolve folder id for type=file` |
+| ファイルのページのファイル名の見出し | `BOX_SELECTORS.fileName` | エラーにはならず、ファイルが選択されないまま親フォルダが開く。または「存在しません」と出て、パスの末尾がおかしい |
+| Canvas の親フォルダへのリンクと `<title>` | `BOX_SELECTORS.canvasParentFolderLink`、`resolveBoxItem` の `canvas` | Canvas のページで上の 2 つと同じ症状 |
+| Box の内部 API `/app-api/enduserapp/folder/<id>` の `folder.path[].name` | `fetchFolderPath` | すべてのページで失敗し、詳細が `Unexpected folder API response shape` |
+| Box Notes / Office Online: `/file/<id>` の HTML の最後の `<script>` にある JSON の `items[0].parentFolderID` と `name` | `fetchEmbeddedItem`、`parseEmbeddedItem` | Notes と Office のページだけ失敗し、詳細が `Cannot find embedded JSON…` か `Unexpected JSON structure…` |
+
+失敗したときは、アイコンの下のポップアップに詳細が出ます。拡張機能のサービスワーカーのコンソールにも `Box lookup result:` として結果がそのまま出ます（拡張機能の管理ページの「ビューを検査: Service Worker」）。
+
+### 調べ方
+壊れたページで開発者ツールのコンソールを開き、該当する部分を直接試します。
+
+```js
+// セレクタがまだ要素を見つけるか（null なら変わっている）
+document.querySelector("[data-resin-target='parentfoldername']")
+document.querySelector("h1.item-name")
+
+// フォルダ API の応答の形（0 はルートフォルダ）
+await (await fetch('/app-api/enduserapp/folder/0')).json()
+```
+
+セレクタが `null` を返したら、要素パネルで親フォルダのリンクやファイル名の見出しを探し、使える属性やクラス名を確かめます。
+
+### 直し方
+1. セレクタが変わった場合は、`BOX_SELECTORS` の該当するリストの**先頭**に新しいセレクタを足します。古いセレクタは残しておけば、古い画面でも動き続けます。
+2. `tests/box-injection.test.js` に、新しいセレクタの場合のテストを足します（「falls back to the older preview header selector」をコピーして書き換えるのが手軽です）。
+3. `npm test` を実行し、拡張機能を再読み込みして、実際の Box のページで試します。
+
+API や埋め込み JSON の形が変わった場合は、`fetchFolderPath` や `parseEmbeddedItem` を新しい形に合わせて書き直します。`parseEmbeddedItem` は文字列を受け取るだけなので、実際のページの `<script>` の中身をテストにそのまま入れて確かめられます。
+
+`box-injection.js` はページに何度も注入されるので、トップレベルには `function` と `var` だけを置いてください（`const` や `let` は 2 回目の注入でエラーになります。テストでも確かめています）。
+
 ## ライセンス
 - MITライセンス
 - PetitZip ライブラリ https://github.com/McbeEringi/petit/blob/main/docs/zip.md を `setup/zip.mjs` として同梱しています
