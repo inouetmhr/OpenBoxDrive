@@ -22,6 +22,13 @@ npm test
 - `tests/box-injection.test.js`: Box ページからのパス解決（DOM と fetch をスタブ化して `box-injection.js` を実行）
 - `tests/test_native_host.py`: ネイティブホスト（パス組み立て、Explorer/Finder 呼び出し、stdio プロトコル）
 
+## 開発: ストア提出用パッケージ
+```bash
+npm run package
+```
+
+`dist/open-box-drive-<version>.zip` を作ります。git 管理下のファイルから、テスト・スクリプト・README などの開発用ファイルを除いたものです（作業ツリーの内容が入ります）。
+
 ## ライセンス
 - MITライセンス
 - PetitZip ライブラリ https://github.com/McbeEringi/petit/blob/main/docs/zip.md を `setup/zip.mjs` として同梱しています

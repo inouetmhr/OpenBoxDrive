@@ -13,6 +13,13 @@ No dependencies needed (Node.js 18+ `node:test` and Python `unittest`).
 npm test
 ```
 
+## Development: store package
+```bash
+npm run package
+```
+
+Creates `dist/open-box-drive-<version>.zip` from the git-tracked files, without tests, scripts and other development files.
+
 ## Note.
 This is a fork of the following extension.
 - https://chrome.google.com/webstore/detail/open-local-folder-by-expl/ehidkllolkmedbkjbdkcgabdadcfppfg?hl=ja
