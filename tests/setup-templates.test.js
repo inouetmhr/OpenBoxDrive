@@ -22,3 +22,8 @@ test('setup page has every element setup/main.js looks up', () => {
 		assert.match(html, new RegExp(`id="${id}"`), `missing #${id}`);
 	}
 });
+
+test('setup page has no duplicate ids', () => {
+	const ids = [...read('setup/index.html').matchAll(/\sid="([^"]+)"/g)].map(m => m[1]);
+	assert.deepEqual(ids.filter((id, i) => ids.indexOf(id) !== i), []);
+});

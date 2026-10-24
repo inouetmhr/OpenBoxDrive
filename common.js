@@ -13,22 +13,23 @@ const showNotification = info => {
 	});
 };
 
-const sendNativeRequest = message => {
+// Notifies the result and also resolves with it, for pages that show it themselves
+const sendNativeRequest = message => new Promise(resolve => {
 	chrome.runtime.sendNativeMessage(applicationName, message, response => {
 		// lastError is set when the native host is not installed or exits abnormally; response is undefined then
 		const lastError = chrome.runtime.lastError;
+		const result = lastError
+			? { resultCode: 'native_host_error', path: lastError.message }
+			: response;
 		if (lastError) {
 			console.error(lastError.message);
-			showNotification({
-				resultCode: 'native_host_error',
-				path: lastError.message,
-			});
-			return;
+		} else {
+			console.info(response);
 		}
-		console.info(response);
-		showNotification(response);
+		showNotification(result);
+		resolve(result);
 	});
-};
+});
 
 export default {
 	applicationName,

@@ -24,6 +24,9 @@ console.log(`Setup is running for ${browser} on ${os}`);
 		e.innerText = isMac ? 'Finder' : 'Explorer';
 	});
 	document.getElementById('filePathToOpen').value = isMac ? '/Applications/' : 'C:\\ProgramData\\';
+	document.querySelectorAll('.extension-id').forEach(e => {
+		e.textContent = chrome.runtime.id;
+	});
 }
 
 async function getTextFromURL(url) {
@@ -93,12 +96,18 @@ if (os !== 'unsupported') {
 {
 	const filePathToOpen = document.getElementById('filePathToOpen');
 	const openButton = document.getElementById('test-open');
-	const execOpen = () => {
+	const testResult = document.getElementById('test-result');
+	// Show the result on the page too: notifications may be turned off in the OS
+	const execOpen = async () => {
 		const filePath = stripSurroundingQuotes(String(filePathToOpen.value));
 		const message = {
 			filePath,
 		};
-		common.sendNativeRequest(message);
+		testResult.textContent = '';
+		const result = await common.sendNativeRequest(message);
+		const succeeded = ['directory_opened', 'file_opened'].includes(result.resultCode);
+		testResult.dataset.status = succeeded ? 'ok' : 'error';
+		testResult.textContent = `${chrome.i18n.getMessage(`result_${result.resultCode}`) || result.resultCode}: ${result.path ?? ''}`;
 	};
 	openButton.addEventListener('click', execOpen);
 	filePathToOpen.addEventListener('keydown', evt => {

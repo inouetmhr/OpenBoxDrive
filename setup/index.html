@@ -28,6 +28,12 @@
 		ol > li {
 			margin-top:7px;
 		}
+		#test-result[data-status="ok"] {
+			color: green;
+		}
+		#test-result[data-status="error"] {
+			color: firebrick;
+		}
 	</style>
 </head>
 <body>
@@ -75,6 +81,13 @@
 		<ul>
 			<li><a id="setup-zip-download-link" download="nativehost-setup.zip">nativehost-setup.zip</a></li>
 		</ul>
+		<p>
+			<span lang="en">Run the setup again when the extension ID changes (for example after reinstalling it,
+				or loading it from another folder), or when an update of the extension asks for it.<br>
+				Extension ID: <code class="extension-id"></code></span>
+			<span lang="ja">※ 拡張機能のIDが変わったとき（再インストールや、別のフォルダからの読み込みなど）や、拡張機能の更新で案内があったときは、もう一度セットアップしてください<br>
+				この拡張機能のID: <code class="extension-id"></code></span>
+		</p>
 
 		<h2>
 			<span lang="en">2. Confirm the setup</span>
@@ -92,6 +105,7 @@
 					<span lang="en">Open in <span class="os-shell">Explorer</span></span>
 					<span lang="ja"><span class="os-shell">Explorer</span>で開く</span>
 				</button>
+				<p id="test-result" role="status"></p>
 			</li>
 		</ol>
 		<hr>
