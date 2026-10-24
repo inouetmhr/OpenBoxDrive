@@ -1,0 +1,10 @@
+{
+	"name": "open-box-drive",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"test": "npm run test:js && npm run test:py",
+		"test:js": "node --test \"tests/**/*.test.js\"",
+		"test:py": "python3 -B -m unittest discover -s tests -p \"test_*.py\""
+	}
+}

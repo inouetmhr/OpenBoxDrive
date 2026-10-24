@@ -1,13 +1,13 @@
 import common from './common.js';
+import { createContextMenu } from './context-menu.js';
 import {
-	CONTEXT_MENU,
-	createContextMenu,
-} from './context-menu.js';
+	isBoxUrl,
+	isFileUrl,
+	extractFilePath,
+	convertUrl2FilePath,
+} from './path-utils.js';
 
 // --- Helpers ---
-
-const isBoxUrl = (url) => url && url.match(/(https:\/\/.*\.?app\.box\.com)/);
-const isFileUrl = (url) => url && url.startsWith('file://');
 
 const sendNativeRequest = (message) => {
 	chrome.runtime.sendNativeMessage(common.applicationName, message, response => {
@@ -134,49 +134,3 @@ function openBoxDrive(result) {
 		sendNativeRequest({ boxPath: path });
 	}
 }
-
-class ExtractResult {
-	constructor(target, path) {
-		this.target = target;
-		this.isSucceeded = !!path;
-		this.path = path;
-	}
-
-	static ofFailure(target) {
-		return new this(target, null);
-	}
-}
-
-const extractFilePath = info => {
-	if (info.menuItemId === CONTEXT_MENU.PAGE.id) {
-		const pageUrl = info.pageUrl;
-		return new ExtractResult(pageUrl, convertUrl2FilePath(pageUrl));
-	}
-	if (info.menuItemId === CONTEXT_MENU.LINK.id) {
-		const linkUrl = info.linkUrl;
-		if (!linkUrl.startsWith('file://')) {
-			// link 要素用の右クリックメニューの表示対象を <all_urls> にしているため fileスキーマ以外を無視する
-			return ExtractResult.ofFailure(linkUrl);
-		}
-		return new ExtractResult(linkUrl, convertUrl2FilePath(linkUrl));
-	}
-	if (info.menuItemId === CONTEXT_MENU.SELECTION.id) {
-		const selectionText = info.selectionText;
-		if (selectionText.startsWith('"') && selectionText.endsWith('"')) {
-			return new ExtractResult(selectionText, selectionText.slice(1, -1));
-		}
-		return new ExtractResult(selectionText, selectionText);
-	}
-};
-
-const convertUrl2FilePath = encodedUrl => {
-	// 1. Remove hash (e.g., #page=12 for PDF pages)
-	// 2. Use decodeURIComponent instead of decodeURI for %23 to # conversion
-	const decodedURI = decodeURIComponent(encodedUrl.replace(/#.*/, ''));
-	if (decodedURI.startsWith('file:///')) {
-		return decodedURI.replace(/^file:\/\/\//, '').replace(/\//g, '\\');
-	}
-	// UNC path ( "\\server_name\path\to\file" )
-	// file://server_name/path/to/file
-	return decodedURI.replace(/^file:/, '').replace(/\//g, '\\');
-};

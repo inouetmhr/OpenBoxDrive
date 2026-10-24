@@ -11,6 +11,17 @@
 - このため拡張機能のインストール時に表示されるセットアップ画面（拡張機能のオプション画面）の指示のとおり、Pythonのインストールおよびローカルプロセスのインストールが動作には必須です
 - ローカルプロセスの Manifest には、拡張機能のユニークIDの埋め込みが必要なため、本拡張機能をフォルダからインストールしている場合、インストールするたびに上記のセットアップ（特にローカルプロセス用Manifestの更新）が必要です。何度もインストールし直した場合には注意してください。
 
+## 開発: テスト
+外部依存なし（Node.js 18+ の `node:test` と Python 標準の `unittest`）で動きます。
+
+```bash
+npm test
+```
+
+- `tests/path-utils.test.js`: URL→ファイルパス変換・右クリックメニューのパス抽出
+- `tests/box-injection.test.js`: Box ページからのパス解決（DOM と fetch をスタブ化して `box-injection.js` を実行）
+- `tests/test_native_host.py`: ネイティブホスト（パス組み立て、Explorer/Finder 呼び出し、stdio プロトコル）
+
 ## ライセンス
 - MITライセンス
 - PetitZip ライブラリ https://github.com/McbeEringi/petit/blob/main/docs/zip.md を `setup/zip.mjs` として同梱しています
