@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Open Box Drive</title>
+	<style>
+		:root {
+			color-scheme: light dark;
+			--text: #1f1f1d;
+			--muted: #5f5e5a;
+			--mark-bg: #fcebeb;
+			--mark: #a32d2d;
+		}
+		@media (prefers-color-scheme: dark) {
+			:root {
+				--text: #ecebe6;
+				--muted: #b4b2a9;
+				--mark-bg: #5a1a1a;
+				--mark: #f09595;
+			}
+		}
+		body {
+			margin: 0;
+			width: 320px;
+			color: var(--text);
+			font: 13px/1.5 system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", sans-serif;
+		}
+		.message {
+			display: flex;
+			gap: 10px;
+			padding: 12px 14px;
+		}
+		.mark {
+			flex: none;
+			width: 20px;
+			height: 20px;
+			border-radius: 50%;
+			background: var(--mark-bg);
+			color: var(--mark);
+			font-weight: 600;
+			text-align: center;
+			line-height: 20px;
+		}
+		.title {
+			font-weight: 600;
+		}
+		.detail {
+			margin-top: 2px;
+			color: var(--muted);
+			overflow-wrap: anywhere;
+		}
+		.detail:empty {
+			display: none;
+		}
+	</style>
+</head>
+<body>
+	<div class="message" role="alert">
+		<span class="mark" aria-hidden="true">!</span>
+		<div>
+			<div class="title" id="title"></div>
+			<div class="detail" id="detail"></div>
+		</div>
+	</div>
+	<script type="module" src="feedback-popup.js"></script>
+</body>
+</html>

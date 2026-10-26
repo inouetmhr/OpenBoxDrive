@@ -1,19 +1,25 @@
 import common from './common.js';
-import {
-	CONTEXT_MENU,
-	createContextMenu,
-} from './context-menu.js';
+import { isBoxUrl } from './path-utils.js';
+import { diagnoseHost } from './setup/status.js';
+import { showBusy, clearFeedback, showError } from './feedback.js';
 
-// --- Helpers ---
+const OPENED = ['directory_opened', 'file_opened'];
+// The setup page tells what to do about these, so open it instead of showing an error
+const SETUP_PROBLEMS = ['native_host_error', 'bad_request'];
 
-const isBoxUrl = (url) => url && url.match(/(https:\/\/.*\.?app\.box\.com)/);
-const isFileUrl = (url) => url && url.startsWith('file://');
-
-const sendNativeRequest = (message) => {
-	chrome.runtime.sendNativeMessage(common.applicationName, message, response => {
-		console.info(response);
-		common.showNotification(response);
-	});
+const sendToHost = async (tabId, message) => {
+	showBusy(tabId);
+	const result = await common.requestNativeHost(message);
+	if (OPENED.includes(result?.resultCode)) {
+		clearFeedback(tabId);
+		return;
+	}
+	if (SETUP_PROBLEMS.includes(result?.resultCode)) {
+		clearFeedback(tabId);
+		chrome.runtime.openOptionsPage();
+		return;
+	}
+	showError(tabId, result?.resultCode, result?.path);
 };
 
 // --- Setup declarativeContent Rule ---
@@ -41,9 +47,6 @@ const setupDeclarativeContent = () => {
 					new chrome.declarativeContent.PageStateMatcher({
 						pageUrl: { hostSuffix: 'app.box.com' },
 					}),
-					new chrome.declarativeContent.PageStateMatcher({
-						pageUrl: { schemes: ['file'] },
-					})
 				],
 				actions: [
 					new chrome.declarativeContent.SetIcon({
@@ -65,45 +68,29 @@ const setupDeclarativeContent = () => {
 
 // --- Lifecycle & Initialization ---
 
-chrome.runtime.onInstalled.addListener(details => {
-	if (details.reason === 'update') {
-		const updateRequiredPreviousVersions = ['0.0.1'];
-		if (updateRequiredPreviousVersions.includes(details.previousVersion)) {
-			chrome.tabs.create({ url: `${chrome.runtime.getManifest().options_page}#update-notification` });
-		}
-	}
+chrome.runtime.onInstalled.addListener(async details => {
+	setupDeclarativeContent();
+
 	if (details.reason === 'install') {
 		chrome.runtime.openOptionsPage();
 	}
-
-	setupDeclarativeContent();
+	if (details.reason === 'update') {
+		// Open the setup page only when the helper says it is too old. Helpers from 1.x don't know ping and exit
+		// without answering (host_failed), yet still open Box folders; a truly broken helper is caught on the next click.
+		const status = diagnoseHost(await common.requestNativeHost({ ping: true }), common.REQUIRED_HOST_VERSION);
+		if (status.state === 'host_outdated') {
+			chrome.runtime.openOptionsPage();
+		}
+	}
 });
-
-chrome.runtime.onInstalled.addListener(createContextMenu);
-chrome.runtime.onStartup.addListener(createContextMenu);
 
 // --- User Actions ---
-
-chrome.contextMenus.onClicked.addListener((info) => {
-	const extractResult = extractFilePath(info);
-	if (!extractResult.isSucceeded) {
-		common.showNotification({
-			resultMessage: chrome.i18n.getMessage('not_a_file_path'),
-			path: extractResult.target,
-		});
-		return;
-	}
-	sendNativeRequest({ filePath: extractResult.path });
-});
 
 chrome.action.onClicked.addListener(async (tab) => {
 	console.info("onClicked on: " + tab.url);
 	const result = await clickedAction(tab);
 	if (result.result === "unsupported") {
-		common.showNotification({
-			resultMessage: '',
-			path: 'This extension works only with box pages or file:// urls.'
-		});
+		showError(tab.id, 'unsupported_page', tab.url);
 	}
 });
 
@@ -114,69 +101,32 @@ async function clickedAction(tab) {
 	console.info("onclick message on tab: " + tab.url);
 
 	if (isBoxUrl(tab.url)) {
-		await chrome.scripting.executeScript({
-			target: { tabId: tab.id },
-			files: ["box-injection.js"]
-		}, openBoxDrive);
-		return { result: "handled" };
-	}
-	if (isFileUrl(tab.url)) {
-		sendNativeRequest({ filePath: convertUrl2FilePath(tab.url) });
+		// Reading the Box page and waiting for Box Drive to sync can take seconds
+		showBusy(tab.id);
+		let injection;
+		try {
+			[injection] = await chrome.scripting.executeScript({
+				target: { tabId: tab.id },
+				files: ["box-injection.js"]
+			});
+		} catch (e) {
+			// e.g. the tab navigated away or the page cannot be scripted
+			console.error(e);
+			showError(tab.id, 'box_lookup_failed', e.message);
+			return { result: "handled" };
+		}
+		openBoxDrive(tab.id, injection?.result);
 		return { result: "handled" };
 	}
 	return { result: "unsupported" };
 }
 
-function openBoxDrive(result) {
-	const path = result?.[0]?.result;
-	console.info("Target path:", path);
-	if (path) {
-		sendNativeRequest({ boxPath: path });
+// result is what box-injection.js returns: { ok: true, path } or { ok: false, reason, detail }
+function openBoxDrive(tabId, result) {
+	console.info("Box lookup result:", result);
+	if (result?.ok) {
+		sendToHost(tabId, { boxPath: result.path });
+		return;
 	}
+	showError(tabId, result?.reason ?? 'box_lookup_failed', result?.detail ?? '');
 }
-
-class ExtractResult {
-	constructor(target, path) {
-		this.target = target;
-		this.isSucceeded = !!path;
-		this.path = path;
-	}
-
-	static ofFailure(target) {
-		return new this(target, null);
-	}
-}
-
-const extractFilePath = info => {
-	if (info.menuItemId === CONTEXT_MENU.PAGE.id) {
-		const pageUrl = info.pageUrl;
-		return new ExtractResult(pageUrl, convertUrl2FilePath(pageUrl));
-	}
-	if (info.menuItemId === CONTEXT_MENU.LINK.id) {
-		const linkUrl = info.linkUrl;
-		if (!linkUrl.startsWith('file://')) {
-			// link 要素用の右クリックメニューの表示対象を <all_urls> にしているため fileスキーマ以外を無視する
-			return ExtractResult.ofFailure(linkUrl);
-		}
-		return new ExtractResult(linkUrl, convertUrl2FilePath(linkUrl));
-	}
-	if (info.menuItemId === CONTEXT_MENU.SELECTION.id) {
-		const selectionText = info.selectionText;
-		if (selectionText.startsWith('"') && selectionText.endsWith('"')) {
-			return new ExtractResult(selectionText, selectionText.slice(1, -1));
-		}
-		return new ExtractResult(selectionText, selectionText);
-	}
-};
-
-const convertUrl2FilePath = encodedUrl => {
-	// 1. Remove hash (e.g., #page=12 for PDF pages)
-	// 2. Use decodeURIComponent instead of decodeURI for %23 to # conversion
-	const decodedURI = decodeURIComponent(encodedUrl.replace(/#.*/, ''));
-	if (decodedURI.startsWith('file:///')) {
-		return decodedURI.replace(/^file:\/\/\//, '').replace(/\//g, '\\');
-	}
-	// UNC path ( "\\server_name\path\to\file" )
-	// file://server_name/path/to/file
-	return decodedURI.replace(/^file:/, '').replace(/\//g, '\\');
-};

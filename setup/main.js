@@ -1,217 +1,127 @@
 import common from '../common.js';
-import { zip, dl } from './zip.mjs';
-import {
-	CONTEXT_MENU,
-	saveContextMenuTitle,
-	getContextMenuTitle,
-	updateContextMenu,
-} from '../context-menu.js';
+import { zip } from './zip.mjs';
+import { diagnoseHost, needsPolling } from './status.js';
+import { buildMacSetupScript, buildWindowsSetupFiles } from './installer.js';
 
-{
-	const localeCode = chrome.i18n.getMessage('_locale_code');
-	document.querySelectorAll(`[lang="${localeCode}"]`).forEach(e => {
-		e.style.display = 'inline';
-	});
-	document.title = chrome.i18n.getMessage('setup_page_title');
-}
+const POLL_INTERVAL_MS = 2000;
+
 // Detect OS and browser
 const ua = window.navigator.userAgent.toLowerCase();
-const isMac = ua.includes('macintosh') || ua.includes('mac os');
-const isWindows = ua.includes('windows');
-const isLinux = ua.includes('linux');
+const os = ua.includes('windows') ? 'windows'
+	: (ua.includes('macintosh') || ua.includes('mac os')) ? 'mac'
+	: 'unsupported';
 const browser = (ua.indexOf(" edg/") !== -1) ? 'edge' : 'chrome';
-console.log(`Setup is running for ${browser} on ${isMac ? 'MacOS' : isWindows ? 'Windows' : isLinux ? 'Linux' : 'Unknown OS'}`);
+const localeCode = chrome.i18n.getMessage('_locale_code');
+console.log(`Setup is running for ${browser} on ${os}`);
 
-if (isMac) {
-	document.getElementById('prerequisite').style.display = 'none';
-	document.getElementById('install-instruction').innerHTML = "ターミナルで <code>sh setup.sh</code> を実行";
-	document.getElementById('manual-setup').style.display = 'none';
-	document.getElementById('filePathToOpen').value = '/Applications/';
-    document.querySelectorAll('.os-shell').forEach(e => {
-		e.innerText = 'Finder';
+const setText = (selector, text) => {
+	document.querySelectorAll(selector).forEach(e => {
+		e.textContent = text;
 	});
-	document.getElementById('optional-feature').style.display = 'none';
-}
+};
 
-async function getTextFromURL(url) {
-	const response = await fetch(url);
-	const blob = await response.blob();
-	const reader = new FileReader();
-  
-	return new Promise((resolve, reject) => {
-		reader.onload = function() {
-			const text = reader.result;
-			resolve(text);
-		};
-		reader.onerror = function() {
-			reject(new Error('Failed to read Blob'));
-		};
-		reader.readAsText(blob);
+// Show only elements for the current locale (lang), OS (data-os) and state (data-state); the last two are space separated lists
+const render = status => {
+	document.querySelectorAll('[lang], [data-os], [data-state]').forEach(e => {
+		const langMatches = !e.hasAttribute('lang') || e.getAttribute('lang') === localeCode;
+		const osMatches = !e.dataset.os || e.dataset.os.split(' ').includes(os);
+		const stateMatches = !e.dataset.state || e.dataset.state.split(' ').includes(status.state);
+		e.hidden = !(langMatches && osMatches && stateMatches);
+	});
+	setText('.host-version', status.hostVersion ?? '');
+	setText('.box-drive-path', status.boxDrivePath ?? '');
+	setText('.error-detail', status.detail ?? '');
+	document.body.classList.add('rendered');
+};
+
+{
+	document.title = chrome.i18n.getMessage('setup_page_title');
+	setText('.os-name', os === 'mac' ? 'macOS' : 'Windows');
+	setText('.os-shell', os === 'mac' ? 'Finder' : 'Explorer');
+	setText('.browser-name', browser === 'edge' ? 'Microsoft Edge' : 'Google Chrome');
+	setText('.extension-id', chrome.runtime.id);
+	// The user may have changed the shortcut in the browser's extension settings
+	const commands = await chrome.commands.getAll();
+	const shortcut = commands.find(command => command.name === '_execute_action')?.shortcut;
+	setText('.shortcut', shortcut ?? '');
+	document.querySelectorAll('.shortcut-line').forEach(e => {
+		e.style.display = shortcut ? '' : 'none';
 	});
 }
 
-async function getBlobArrayBuffer(url) {
-	const response = await fetch(url);
-	const blob = await response.blob();
-	const arrayBuffer = await blob.arrayBuffer();
-	return arrayBuffer;
-}
+// --- Checking the helper ---
 
-async function generateSetupZip() {
-	const nativePyFileName = 'native-messaging-host-app.py';
-	let nativeAppFileName, manifestJsonContent, setupTemplateUrl;
-	if (isMac) {
-		nativeAppFileName = 'native-messaging-host-app.sh';
-		manifestJsonContent = generateManifestJson('___INSTDIR___/' + nativeAppFileName);
-		setupTemplateUrl = "setup.template.sh";
-	} else {
-		nativeAppFileName = 'native-messaging-host-app.bat';
-		manifestJsonContent = generateManifestJson(nativeAppFileName);
-		setupTemplateUrl = "setup.template.bat";
+let pollTimer;
+const check = async () => {
+	clearTimeout(pollTimer);
+	const status = os === 'unsupported'
+		? { state: 'unsupported' }
+		: diagnoseHost(await common.requestNativeHost({ ping: true }), common.REQUIRED_HOST_VERSION);
+	render(status);
+	// Each check starts the helper process, so stop while the page is in the background
+	if (needsPolling(status.state) && !document.hidden) {
+		pollTimer = setTimeout(check, POLL_INTERVAL_MS);
 	}
+};
+document.addEventListener('visibilitychange', () => {
+	if (!document.hidden) check();
+});
+render({ state: 'checking' });
+check();
 
-	const filePromises = [
-		getBlobArrayBuffer(`../host-app-src/${nativeAppFileName}`),
-		getBlobArrayBuffer(`../host-app-src/${nativePyFileName}`),
-		getTextFromURL(setupTemplateUrl)
-	];
+// --- Downloading the setup file ---
 
-	const [nativeAppBuffer, nativePyBuffer, setupTemplate] = await Promise.all(filePromises);
-	const setupScript = setupTemplate.replace("___BROWSER___", browser).replace("___APPLICATIONNAME___", common.applicationName);
+const fetchText = async url => (await fetch(url)).text();
 
-	const files = [
-		{name: nativeAppFileName, buffer: nativeAppBuffer},
-		{name: nativePyFileName, buffer: nativePyBuffer},
-		{name: "manifest-template.json", buffer: new Blob([manifestJsonContent])},
-		{name: isMac ? 'setup.sh' : 'setup.bat', buffer: new Blob([setupScript])},
-	];
-	return zip(files);
-}
+const download = (name, blob) => {
+	const a = document.createElement('a');
+	a.href = URL.createObjectURL(blob);
+	a.download = name;
+	a.click();
+	setTimeout(() => URL.revokeObjectURL(a.href), 60 * 1000);
+};
 
-const generateManifestJson = (nativeMessagingHostPath) => {
-	const value = {
-		name: common.applicationName,
+// Built on click from the extension's current files, so a page left open doesn't hand out an old helper
+const downloadSetup = async () => {
+	const options = {
+		browser,
+		applicationName: common.applicationName,
 		description: common.description,
-		path: nativeMessagingHostPath,
-		type: 'stdio',
-		allowed_origins: [
-			`chrome-extension://${chrome.runtime.id}/`,
-		],
+		extensionId: chrome.runtime.id,
 	};
-	const replacer = null;
-	const space = '\t';
-	return JSON.stringify(value, replacer, space);
+	if (os === 'mac') {
+		const [template, hostPy, hostSh] = await Promise.all([
+			fetchText('setup.template.sh'),
+			fetchText('../host-app-src/native-messaging-host-app.py'),
+			fetchText('../host-app-src/native-messaging-host-app.sh'),
+		]);
+		const script = buildMacSetupScript({ ...options, template, hostPy, hostSh });
+		download('open-box-drive-setup.sh', new Blob([script], { type: 'text/x-sh' }));
+		return;
+	}
+	const [template, hostPy, hostBat] = await Promise.all([
+		fetchText('setup.template.bat'),
+		fetchText('../host-app-src/native-messaging-host-app.py'),
+		fetchText('../host-app-src/native-messaging-host-app.bat'),
+	]);
+	const files = buildWindowsSetupFiles({ ...options, template, hostPy, hostBat });
+	download('nativehost-setup.zip', await zip(files.map(({ name, content }) => ({ name, buffer: new Blob([content]) }))));
 };
+document.getElementById('download-setup').addEventListener('click', downloadSetup);
 
-const generateRegistryInfo = (dirPath) => {
-	const filePath = `${dirPath.replace(/[\\/]$/, '')}/manifest.json`;
-	const key = `HKEY_CURRENT_USER/Software/${browser}/NativeMessagingHosts/${common.applicationName}`.replace(/[/]/g, '\\');
-	const value = filePath.replace(/[/]/g, '\\');
-	const regFileContent = `
-Windows Registry Editor Version 5.00
+document.getElementById('copy-mac-command').addEventListener('click', () => {
+	navigator.clipboard.writeText(document.getElementById('mac-command').textContent);
+});
 
-[${key}]
-@="${value.replace(/[\\]/g, '\\\\')}"
-	`.trim();
-	return {
-		key,
-		value,
-		regFileContent,
-	};
-};
+// --- Trying it out ---
 
 {
-	const manifestJsonContent = generateManifestJson();
-	const manifestBlob = new Blob([manifestJsonContent], {type: 'text/plain',});
-	const manifestLink = document.getElementById('manifest-json-download-link');
-	manifestLink.href = URL.createObjectURL(manifestBlob);
-
-	const setupZip = await generateSetupZip();
-	const zipLink = document.getElementById('setup-zip-download-link');
-	zipLink.href = URL.createObjectURL(setupZip);
-}
-
-{
-	/**
-	 * Convert a string to a Uint16Array for UTF-16
-	 * @param {String} str
-	 * @returns {Uint16Array}
-	 */
-	const convertToUtf16 = str => {
-		const codePointArray = Array.from(str).map(c => c.codePointAt(0));
-		// TODO: Supports surrogate pairs (if codePoint is greater than 0xFFFF)
-		return new Uint16Array(codePointArray);
-	};
-
-	const dirPath = document.getElementById('dirPath');
-	const downloadLinks = document.querySelectorAll('.reg-download-link');
-	downloadLinks.forEach(e => e.download = 'manifest.reg');
-	const update = () => {
-		const bom = '\uFEFF';
-		const registryInfo = generateRegistryInfo(dirPath.value || dirPath.placeholder);
-		const regFileContent = registryInfo.regFileContent;
-
-		const blob = new Blob([convertToUtf16(bom + regFileContent).buffer], {
-			type: 'text/plain',
-		});
-		downloadLinks.forEach(e => e.href = URL.createObjectURL(blob));
-
-		document.getElementById('reg-content').innerText = regFileContent;
-		document.getElementById('reg-key').innerText = registryInfo.key;
-		document.getElementById('reg-value').innerText = registryInfo.value;
-	};
-
-	dirPath.addEventListener('change', update);
-	dirPath.addEventListener('keyup', update);
-	dirPath.addEventListener('paste', () => {
-		setTimeout(update, 10);
-	});
-	update();
-}
-
-{
-	const filePathToOpen = document.getElementById('filePathToOpen');
-	const openButton = document.getElementById('test-open');
-	const execOpen = () => {
-		let filePath = String(filePathToOpen.value);
-		if (filePath.startsWith('"') && filePath.endsWith('"')) {
-			filePath = filePath.slice(1, -1);
-		}
-		const message = {
-			filePath,
-		};
-		chrome.runtime.sendNativeMessage(common.applicationName, message, response => {
-			console.info(response);
-			common.showNotification(response);
-		});
-	};
-	openButton.addEventListener('click', execOpen);
-	filePathToOpen.addEventListener('keydown', evt => {
-		if (evt.key === 'Enter') {
-			execOpen();
-		}
-	});
-}
-
-{
-	const container = document.getElementById('context-menu-title-setting-container');
-
-	getContextMenuTitle().then(contextMenuTitle => {
-		Object.entries(contextMenuTitle).map(([key, currentTitle]) => {
-			const input = document.createElement('input');
-			input.value = currentTitle;
-			input.placeholder = CONTEXT_MENU[key].defaultTitle;
-			input.title = chrome.i18n.getMessage('press_enter_to_save');
-			input.addEventListener('keydown', evt => {
-				if (evt.key === 'Enter') {
-					saveContextMenuTitle(key, input.value).then(updateContextMenu);
-				}
-			});
-
-			const li = document.createElement('li');
-			li.append(CONTEXT_MENU[key].description);
-			li.append(input);
-			container.append(li);
-		});
+	const openResult = document.getElementById('open-result');
+	document.getElementById('open-box-drive').addEventListener('click', async () => {
+		openResult.textContent = '';
+		const result = await common.requestNativeHost({ boxPath: ['All Files'] });
+		const succeeded = ['directory_opened', 'file_opened'].includes(result.resultCode);
+		openResult.dataset.status = succeeded ? 'ok' : 'error';
+		openResult.textContent = `${chrome.i18n.getMessage(`result_${result.resultCode}`) || result.resultCode}: ${result.path ?? ''}`;
 	});
 }
