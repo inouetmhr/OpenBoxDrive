@@ -12,6 +12,8 @@
 ```
 Box の Web ページで見ているフォルダやファイルを、Box Drive のフォルダとしてすぐに開ける拡張機能です。
 
+※ Windows または macOS の Box Drive と、インストール後の設定画面から入れる小さなヘルパーが必要です（Linux と ChromeOS では Box Drive が使えないため動作しません）。
+
 ■ できること
 ・Box のフォルダのページでツールバーのアイコンをクリックすると、同じフォルダを Box Drive で開きます（Windows は Explorer、macOS は Finder）。
 ・キーボードショートカット: Windows は Ctrl+Shift+B、macOS は ⌘⇧B
@@ -35,6 +37,8 @@ Box および Box Drive は Box, Inc. の商標です。この拡張機能は Bo
 ### Description (English)
 ```
 Open the Box folder or file you are viewing on the Box website directly in Box Drive.
+
+Note: requires Box Drive on Windows or macOS, and a small helper program that the setup page installs after you add the extension. It doesn't work on Linux or ChromeOS, where Box Drive isn't available.
 
 What it does
 - On a Box folder page, click the toolbar icon to open the same folder in Box Drive (Explorer on Windows, Finder on macOS).
@@ -66,6 +70,41 @@ Box and Box Drive are trademarks of Box, Inc. This extension is not made or endo
 | ストアアイコン | 128×128 | `icons/icon128.png` |
 | スクリーンショット | 1280×800 | `store/screenshots/<ja\|en>/1-overview.png` 〜 `4-error.png` |
 | 小さいプロモーション タイル | 440×280 | `store/screenshots/<ja\|en>/promo-small.png` |
+
+## テストの手順（ダッシュボードの「Test instructions」タブ）
+審査担当者向けです。Box のテスト用アカウントは渡さず、審査担当者に無料の Box アカウントを作ってもらう前提です。Box がなくても確かめられる動作も書いてあります。
+
+提出前に確かめておくこと:
+- 無料の個人向けプラン（Box Individual）のアカウントで、Box Drive にサインインできるか（料金ページには「すべてのプランにデスクトップ機能」とあるが、Box Drive の名前は明記されていない）
+- 動画を添える場合は、下の手順 A の 1〜6 を録画して、限定公開の URL を最後の行に入れる
+
+```
+This extension opens the Box folder that the user is viewing on the Box website in Box Drive, using Explorer (Windows) or Finder (macOS). It relies on Box Drive and on a small native messaging host that the extension's setup page installs.
+
+Requirements
+- Windows 10/11 or macOS. Box Drive is not available on Linux or ChromeOS, so the extension cannot open folders there; its setup page says so.
+- A Box account. A free Box Individual account works: https://www.box.com/pricing/individual
+- Box Drive installed and signed in with that account: https://www.box.com/resources/downloads
+- Windows: Python 3 from python.org. macOS: /usr/bin/python3 (macOS may offer to install the command line developer tools on first use).
+
+A. Full test (about 10 minutes)
+1. Sign in to Box Drive with the Box account. A folder appears at C:\Users\<name>\Box (Windows) or ~/Library/CloudStorage/Box-Box (macOS).
+2. Install the extension. Its setup page opens and shows "Install the helper".
+3. Click "Download the setup file".
+   - Windows: extract nativehost-setup.zip and double-click setup.bat. If SmartScreen appears, choose "More info" and "Run anyway".
+   - macOS: in Terminal, run: sh ~/Downloads/open-box-drive-setup.sh
+4. Without reloading, the setup page changes to "Ready" and shows the Box Drive folder.
+5. Click "Try opening Box Drive" on the setup page: the Box Drive folder opens in Explorer or Finder.
+6. In the browser, open https://app.box.com/folder/0 (signed in), open any folder, and click the extension's toolbar icon (or press Ctrl+Shift+B / Cmd+Shift+B): the same folder opens in Explorer or Finder. On a file page, the parent folder opens with the file selected.
+
+B. Behaviour you can check without Box Drive
+- Before step 3, the setup page explains what is missing and shows the setup file for the current OS.
+- After step 3 without Box Drive, the setup page shows "The Box Drive folder wasn't found" with the expected path and a link to Box Drive.
+- On a page that is not a Box folder or file page (for example https://example.com), clicking the icon shows a popup under the icon: "Works only on Box folder and file pages."
+- On a Linux or ChromeOS device, the setup page states that only Windows and macOS are supported.
+
+Demo video of steps 1-6: <URL>
+```
 
 ## プライバシーへの取り組み
 
