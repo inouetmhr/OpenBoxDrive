@@ -3,7 +3,7 @@
 		"message": "Open Box Drive"
 	},
 	"extension_description": {
-		"message": "Open Box Drive folder in explorer"
+		"message": "Open the Box folder or file you are viewing in Box Drive, with Explorer on Windows or Finder on macOS."
 	},
 	"_locale_code": {
 		"message": "en",

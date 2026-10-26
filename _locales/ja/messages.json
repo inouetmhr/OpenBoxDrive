@@ -3,7 +3,7 @@
 		"message": "Open Box Drive"
 	},
 	"extension_description": {
-		"message": "BoxのWebページで開いてるフォルダをBox Driveで開く"
+		"message": "Box の Web ページで見ているフォルダやファイルを、Box Drive（Windows は Explorer、macOS は Finder）で開きます。"
 	},
 	"_locale_code": {
 		"message": "ja",
