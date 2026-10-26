@@ -143,3 +143,14 @@ test('update: opens the setup page only when the installed helper is outdated', 
 	await listeners.onInstalled({ reason: 'update' });
 	assert.equal(optionsPageOpened, 1);
 });
+
+test('update: leaves 1.x helpers alone, which exit on ping but still open Box folders', async () => {
+	nativeReply = { lastError: { message: 'Native host has exited.' } };
+	await listeners.onInstalled({ reason: 'update' });
+	assert.equal(optionsPageOpened, 0);
+	boxFolder();
+	nativeReply = { response: { resultCode: 'directory_opened', path: 'C:\\Users\\me\\Box\\Team' } };
+	await clickAction({ url: 'https://app.box.com/folder/1' });
+	assert.deepEqual(nativeMessages.at(-1), { boxPath: ['All Files', 'Team'] });
+	assert.equal(optionsPageOpened, 0);
+});

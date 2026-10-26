@@ -75,9 +75,10 @@ chrome.runtime.onInstalled.addListener(async details => {
 		chrome.runtime.openOptionsPage();
 	}
 	if (details.reason === 'update') {
-		// An update may need a newer helper than the one installed
+		// Open the setup page only when the helper says it is too old. Helpers from 1.x don't know ping and exit
+		// without answering (host_failed), yet still open Box folders; a truly broken helper is caught on the next click.
 		const status = diagnoseHost(await common.requestNativeHost({ ping: true }), common.REQUIRED_HOST_VERSION);
-		if (['host_outdated', 'host_failed'].includes(status.state)) {
+		if (status.state === 'host_outdated') {
 			chrome.runtime.openOptionsPage();
 		}
 	}
