@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Store image</title>
+	<!-- Rendered by scripts/screenshots.mjs: ?n=overview|setup|install|error|promo&lang=ja|en -->
+	<style>
+		:root {
+			--bg: #eef2f7;
+			--text: #1f1f1d;
+			--muted: #5f5e5a;
+			--card: #ffffff;
+			--border: #d7dbe2;
+			--accent: #1d5fa8;
+			--accent-bg: #e6f0fb;
+			--folder: #e8b43a;
+		}
+		* { box-sizing: border-box; }
+		body {
+			margin: 0;
+			width: 1280px;
+			height: 800px;
+			overflow: hidden;
+			background: var(--bg);
+			color: var(--text);
+			font-family: system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Yu Gothic UI", sans-serif;
+		}
+		.slide {
+			display: grid;
+			grid-template-columns: 440px 1fr;
+			gap: 40px;
+			align-items: center;
+			height: 100%;
+			padding: 0 56px;
+		}
+		.caption h1 {
+			font-size: 37px;
+			line-height: 1.4;
+			font-weight: 700;
+			margin: 0 0 20px;
+		}
+		.caption p {
+			font-size: 21px;
+			line-height: 1.7;
+			color: var(--muted);
+			margin: 0;
+		}
+		.brand {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			margin-bottom: 36px;
+			font-size: 20px;
+			font-weight: 600;
+		}
+		.brand img { width: 40px; height: 40px; }
+		.window {
+			background: var(--card);
+			border: 1px solid var(--border);
+			border-radius: 12px;
+			overflow: hidden;
+			box-shadow: 0 12px 36px rgba(20, 40, 80, 0.14);
+		}
+		.titlebar {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			height: 40px;
+			padding: 0 14px;
+			background: #f3f4f6;
+			border-bottom: 1px solid var(--border);
+			font-size: 14px;
+			color: var(--muted);
+		}
+		.dot { width: 12px; height: 12px; border-radius: 50%; background: #d4d6db; }
+		.address {
+			flex: 1;
+			margin-left: 8px;
+			padding: 4px 12px;
+			border-radius: 6px;
+			background: #ffffff;
+			border: 1px solid var(--border);
+		}
+		.toolbar-icon {
+			width: 28px;
+			height: 28px;
+			border-radius: 6px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+		.toolbar-icon img { width: 20px; height: 20px; }
+		.toolbar-icon.active { background: var(--accent-bg); outline: 2px solid var(--accent); }
+		iframe { border: 0; display: block; background: #f6f6f4; }
+
+		/* Overview: simplified Box page and file manager, not copies of the real UIs */
+		.flow { display: flex; align-items: center; gap: 18px; }
+		.flow .window { width: 300px; }
+		.pane { padding: 18px 20px; min-height: 360px; }
+		.crumbs { font-size: 14px; color: var(--muted); margin-bottom: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+		.crumbs b { color: var(--text); }
+		.row {
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			padding: 11px 6px;
+			border-bottom: 1px solid #eceef2;
+			font-size: 16px;
+		}
+		.icon-folder { width: 24px; height: 18px; border-radius: 3px; background: var(--folder); position: relative; }
+		.icon-folder::before { content: ""; position: absolute; top: -4px; left: 0; width: 10px; height: 6px; border-radius: 2px 2px 0 0; background: var(--folder); }
+		.icon-file { width: 18px; height: 22px; border-radius: 3px; border: 2px solid #9aa3b2; margin: 0 3px; }
+		.arrow { font-size: 44px; color: var(--accent); }
+		.label { text-align: center; margin-top: 14px; font-size: 16px; color: var(--muted); }
+
+		/* Error: toolbar with the real feedback popup under the icon */
+		.error-scene .window { width: 720px; }
+		.error-scene .page { height: 460px; background: #fafafa; padding: 32px; color: #9aa3b2; font-size: 18px; }
+		.popup-anchor { position: absolute; right: 22px; top: 46px; }
+		.popup {
+			width: 322px;
+			background: var(--card);
+			border: 1px solid var(--border);
+			border-radius: 10px;
+			box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+			overflow: hidden;
+		}
+
+		/* Small promo tile, 440x280 */
+		body.promo { width: 440px; height: 280px; }
+		.promo-tile {
+			height: 100%;
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			padding: 0 36px;
+			background: var(--accent);
+			color: #ffffff;
+		}
+		.promo-tile .brand { margin-bottom: 18px; font-size: 26px; }
+		.promo-tile .brand img { width: 56px; height: 56px; background: #ffffff; border-radius: 12px; padding: 6px; }
+		.promo-tile p { font-size: 19px; line-height: 1.5; margin: 0; }
+	</style>
+</head>
+<body>
+<script type="module">
+const params = new URLSearchParams(location.search);
+const n = params.get('n') ?? 'overview';
+const lang = params.get('lang') ?? 'ja';
+const messages = await (await fetch(`/_locales/${lang}/messages.json`)).json();
+
+const text = {
+	ja: {
+		overview: ['Box のページから<br>ワンクリックで<br>Box Drive のフォルダへ', '見ているフォルダを、そのまま Explorer や Finder で開きます。ファイルのページでは、そのファイルを選択して開きます。'],
+		setup: ['セットアップは<br>画面の案内どおり', 'ヘルパーと Box Drive の状態を自動で確認し、準備ができたら知らせます。'],
+		install: ['必要な手順だけを<br>表示します', 'Windows と macOS それぞれのセットアップファイルを、その場で用意します。'],
+		error: ['開けなかったときは<br>アイコンのそばで<br>知らせます', 'ページには何も追加しません。成功したときは何も表示しません。'],
+		promo: 'Box のページから Box Drive のフォルダへワンクリック',
+		boxPage: 'Box の Web ページ', fileManager: 'Box Drive（Explorer / Finder）',
+		all: 'すべてのファイル', team: 'チーム', plan: '2026 企画',
+		rows: ['議事録', '提案資料', '予算.xlsx', '日程.docx'],
+		page: 'example.com',
+	},
+	en: {
+		overview: ['From a Box page<br>to the Box Drive folder<br>in one click', 'Opens the folder you are viewing in Explorer or Finder. On a file page, the file is selected.'],
+		setup: ['Setup guides<br>you through', 'The setup page checks the helper and Box Drive, and tells you when everything is ready.'],
+		install: ['Shows only<br>the steps you need', 'Builds the setup file for Windows or macOS on the spot.'],
+		error: ['Tells you right<br>under the icon<br>when it can\'t open', 'Nothing is added to the page, and nothing is shown when it works.'],
+		promo: 'From a Box page to the Box Drive folder in one click',
+		boxPage: 'Box web page', fileManager: 'Box Drive (Explorer / Finder)',
+		all: 'All Files', team: 'Team', plan: '2026 Plans',
+		rows: ['Minutes', 'Proposals', 'Budget.xlsx', 'Schedule.docx'],
+		page: 'example.com',
+	},
+}[lang];
+
+const brand = '<div class="brand"><img src="/icons/icon128.png" alt="">Open Box Drive</div>';
+const caption = ([title, body]) => `<div class="caption">${brand}<h1>${title}</h1><p>${body}</p></div>`;
+const rows = t => t.rows.map((name, i) => `<div class="row"><span class="${i < 2 ? 'icon-folder' : 'icon-file'}"></span>${name}</div>`).join('');
+const titlebar = (address, icon) => `<div class="titlebar"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+	<span class="address">${address}</span>${icon ? `<span class="toolbar-icon ${icon}"><img src="/icons/icon48.png" alt=""></span>` : ''}</div>`;
+// The setup page at 82%, cropped to a 700x600 window body
+const SETUP_SCALE = 0.82;
+const setupFrame = query => `<div class="window" style="width: 700px;">${titlebar(lang === 'ja' ? 'Open Box Drive の設定' : 'Open Box Drive setup')}
+	<div style="width: 700px; height: 600px; overflow: hidden; background: #f6f6f4;">
+		<iframe src="/setup/index.html?${query}&lang=${lang}" style="width: ${700 / SETUP_SCALE}px; height: ${600 / SETUP_SCALE}px; transform: scale(${SETUP_SCALE}); transform-origin: 0 0;"></iframe>
+	</div></div>`;
+
+const visuals = {
+	overview: () => `<div class="flow">
+		<div><div class="window">${titlebar('app.box.com/folder/…', 'active')}
+			<div class="pane"><div class="crumbs">${text.all} › ${text.team} › <b>${text.plan}</b></div>${rows(text)}</div></div>
+			<div class="label">${text.boxPage}</div></div>
+		<div class="arrow">→</div>
+		<div><div class="window">${titlebar(`Box › ${text.team} › ${text.plan}`)}
+			<div class="pane">${rows(text)}</div></div>
+			<div class="label">${text.fileManager}</div></div>
+	</div>`,
+	setup: () => setupFrame('os=mac&host=ok'),
+	install: () => setupFrame('os=windows&host=missing'),
+	error: () => {
+		const title = encodeURIComponent(messages.result_unsupported_page.message);
+		const detail = encodeURIComponent(`https://${text.page}/`);
+		return `<div class="error-scene" style="position: relative;"><div class="window">${titlebar(text.page, 'active')}
+			<div class="page"></div></div>
+			<div class="popup-anchor"><div class="popup"><iframe src="/feedback-popup.html?title=${title}&detail=${detail}" style="width: 320px; height: ${lang === 'ja' ? 84 : 64}px; background: #ffffff;"></iframe></div></div></div>`;
+	},
+};
+
+if (n === 'promo') {
+	document.body.className = 'promo';
+	document.body.insertAdjacentHTML('beforeend', `<div class="promo-tile">${brand}<p>${text.promo}</p></div>`);
+} else {
+	document.body.insertAdjacentHTML('beforeend', `<div class="slide">${caption(text[n])}<div>${visuals[n]()}</div></div>`);
+}
+</script>
+</body>
+</html>

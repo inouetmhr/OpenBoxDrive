@@ -10,6 +10,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const EXCLUDED = [
 	/^tests\//,
 	/^scripts\//,
+	/^store\//,
 	/^dist\//,
 	/^package(-lock)?\.json$/,
 	/^README.*\.md$/,

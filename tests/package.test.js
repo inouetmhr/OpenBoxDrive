@@ -14,8 +14,8 @@ test('package contains the extension and the native host sources', () => {
 });
 
 test('package leaves out development files', () => {
-	const files = listPackageFiles([...tracked, 'tests/x.test.js', 'scripts/package.mjs', 'package.json', '.editorconfig', 'README_ja.md']);
-	assert.deepEqual(files.filter(file => /^(tests|scripts)\/|^package\.json$|^\.|^README|^PrivacyPolicy/.test(file)), []);
+	const files = listPackageFiles([...tracked, 'tests/x.test.js', 'scripts/package.mjs', 'store/listing.md', 'store/screenshots/1-overview.png', 'package.json', '.editorconfig', 'README_ja.md']);
+	assert.deepEqual(files.filter(file => /^(tests|scripts|store)\/|^package\.json$|^\.|^README|^PrivacyPolicy/.test(file)), []);
 });
 
 test('reserved names starting with "_" are detected except _locales', () => {

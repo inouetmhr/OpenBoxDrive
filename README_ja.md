@@ -68,6 +68,12 @@ npm run package
 
 `dist/open-box-drive-<version>.zip` を作ります。git 管理下のファイルから、テスト・スクリプト・README などの開発用ファイルを除いたものです（作業ツリーの内容が入ります）。
 
+ストアの掲載文と権限の説明は `store/listing.md` にあります。スクリーンショットと小さいプロモーション タイルは、次のコマンドで `store/screenshots/<ja|en>/` に作り直せます（Chrome が必要です。別の場所にある場合は `CHROME_PATH` で指定します）。
+
+```bash
+npm run screenshots
+```
+
 ## 開発: Box の画面が変わったとき
 
 Box の Web ページの作りに依存しているのは `box-injection.js` だけです。依存している箇所と、壊れたときの症状は次のとおりです。
