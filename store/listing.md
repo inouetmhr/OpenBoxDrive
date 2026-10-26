@@ -106,6 +106,16 @@ B. Behaviour you can check without Box Drive
 Demo video of steps 1-6: <URL>
 ```
 
+### 短い版（500 文字以内の欄用、493 文字。改行を 2 文字と数えても 498 文字）
+```
+Needs Windows or macOS with Box Drive (not on Linux/ChromeOS) and Python 3 (macOS: /usr/bin/python3). A free Box account works.
+1. Sign in to Box Drive.
+2. Install the extension; its setup page opens.
+3. Click "Download the setup file" and run it (Windows: setup.bat in the zip; macOS: sh ~/Downloads/open-box-drive-setup.sh). The page turns "Ready".
+4. Open a folder on app.box.com, click the toolbar icon: it opens in Explorer/Finder.
+If anything is missing, the setup page or popup says so.
+```
+
 ## プライバシーへの取り組み
 
 ### 単一用途
