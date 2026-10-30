@@ -3,8 +3,11 @@ const applicationName = `com.github.inouetmhr.${description.toLowerCase().replac
 // getManifest().name is the raw "__MSG_extension_name__" placeholder, so read the localized name instead
 const extensionName = chrome.i18n.getMessage('extension_name');
 
-// Bump together with HOST_VERSION in native-messaging-host-app.py when the extension needs a newer host
-const REQUIRED_HOST_VERSION = 2;
+// Oldest helper (HOST_VERSION in native-messaging-host-app.py) this extension works with; raise it when the extension needs a newer one.
+// 1.x helpers, which predate HOST_VERSION, count as version 1.
+const REQUIRED_HOST_VERSION = 1;
+// HOST_VERSION of the helper this extension ships; helpers between the two keep working and only get an update suggestion
+const LATEST_HOST_VERSION = 3;
 
 // Resolves with the host's response, or { resultCode: 'native_host_error', path: <reason> } when it cannot be reached
 const requestNativeHost = message => new Promise(resolve => {
@@ -26,5 +29,6 @@ export default {
 	description,
 	extensionName,
 	REQUIRED_HOST_VERSION,
+	LATEST_HOST_VERSION,
 	requestNativeHost,
 };

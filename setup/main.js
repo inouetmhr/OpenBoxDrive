@@ -1,6 +1,6 @@
 import common from '../common.js';
 import { zip } from './zip.mjs';
-import { diagnoseHost, needsPolling } from './status.js';
+import { checkHost, needsPolling, suggestsHelperUpdate } from './status.js';
 import { buildMacSetupScript, buildWindowsSetupFiles } from './installer.js';
 
 const POLL_INTERVAL_MS = 2000;
@@ -20,12 +20,14 @@ const setText = (selector, text) => {
 	});
 };
 
-// Show only elements for the current locale (lang), OS (data-os) and state (data-state); the last two are space separated lists
+// Show only elements for the current locale (lang), OS (data-os) and state (data-state); the last two are space separated lists.
+// update_available is matched as an extra state on top of ready or box_drive_missing.
 const render = status => {
+	const states = [status.state, ...(status.updateAvailable ? ['update_available'] : [])];
 	document.querySelectorAll('[lang], [data-os], [data-state]').forEach(e => {
 		const langMatches = !e.hasAttribute('lang') || e.getAttribute('lang') === localeCode;
 		const osMatches = !e.dataset.os || e.dataset.os.split(' ').includes(os);
-		const stateMatches = !e.dataset.state || e.dataset.state.split(' ').includes(status.state);
+		const stateMatches = !e.dataset.state || e.dataset.state.split(' ').some(state => states.includes(state));
 		e.hidden = !(langMatches && osMatches && stateMatches);
 	});
 	setText('.host-version', status.hostVersion ?? '');
@@ -56,10 +58,12 @@ const check = async () => {
 	clearTimeout(pollTimer);
 	const status = os === 'unsupported'
 		? { state: 'unsupported' }
-		: diagnoseHost(await common.requestNativeHost({ ping: true }), common.REQUIRED_HOST_VERSION);
+		: await checkHost(common.requestNativeHost, common.REQUIRED_HOST_VERSION);
+	status.updateAvailable = suggestsHelperUpdate(status, common.LATEST_HOST_VERSION);
 	render(status);
-	// Each check starts the helper process, so stop while the page is in the background
-	if (needsPolling(status.state) && !document.hidden) {
+	// Each check starts the helper process, so stop while the page is in the background.
+	// Keep checking while an update is suggested, so the notice goes away once the new helper is installed.
+	if ((needsPolling(status.state) || status.updateAvailable) && !document.hidden) {
 		pollTimer = setTimeout(check, POLL_INTERVAL_MS);
 	}
 };

@@ -59,7 +59,7 @@ npm test
 | `tests/path-utils.test.js`、`tests/common.test.js` | Box の URL の判定、ヘルパーとの通信 |
 | `tests/setup-templates.test.js`、`tests/package.test.js` | セットアップのテンプレートと設定画面の HTML、ストア提出用パッケージの中身 |
 
-ヘルパーとの間のメッセージ形式を変えるときは、インストール済みの古いヘルパーとも動くようにしてください。ヘルパーは利用者がセットアップをやり直すまで更新されません。新しいヘルパーが必要になったら、`host-app-src/native-messaging-host-app.py` の `HOST_VERSION` と `common.js` の `REQUIRED_HOST_VERSION` を一緒に上げます。
+ヘルパーとの間のメッセージ形式を変えるときは、インストール済みの古いヘルパーとも動くようにしてください。ヘルパーは利用者がセットアップをやり直すまで更新されません。ヘルパーを変えたら、`host-app-src/native-messaging-host-app.py` の `HOST_VERSION` と `common.js` の `LATEST_HOST_VERSION` を一緒に上げます。古いヘルパーのままでも動くなら、設定画面が更新を勧めるだけです（拡張機能の更新時に 1 回開きます）。古いヘルパーでは動かなくなるなら、`REQUIRED_HOST_VERSION` も上げます。設定画面が更新を求め、入れ直すまで使えません。
 
 ## 開発: ストア提出用パッケージ
 ```bash

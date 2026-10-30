@@ -1,6 +1,6 @@
 import common from './common.js';
 import { isBoxUrl } from './path-utils.js';
-import { diagnoseHost } from './setup/status.js';
+import { checkHost, suggestsHelperUpdate } from './setup/status.js';
 import { showBusy, clearFeedback, showError } from './feedback.js';
 
 const OPENED = ['directory_opened', 'file_opened'];
@@ -75,10 +75,11 @@ chrome.runtime.onInstalled.addListener(async details => {
 		chrome.runtime.openOptionsPage();
 	}
 	if (details.reason === 'update') {
-		// Open the setup page only when the helper says it is too old. Helpers from 1.x don't know ping and exit
-		// without answering (host_failed), yet still open Box folders; a truly broken helper is caught on the next click.
-		const status = diagnoseHost(await common.requestNativeHost({ ping: true }), common.REQUIRED_HOST_VERSION);
-		if (status.state === 'host_outdated') {
+		// Open the setup page once per update when the helper has to be set up again or a newer one is suggested.
+		// 1.x helpers (host_legacy) and older 2.x ones keep opening Box folders; the page only recommends updating them.
+		const status = await checkHost(common.requestNativeHost, common.REQUIRED_HOST_VERSION);
+		if (['host_outdated', 'host_failed', 'host_legacy'].includes(status.state)
+			|| suggestsHelperUpdate(status, common.LATEST_HOST_VERSION)) {
 			chrome.runtime.openOptionsPage();
 		}
 	}

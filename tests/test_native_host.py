@@ -56,8 +56,33 @@ class OpenPathTest(TempDirTestCase):
 
     def test_directory_on_windows(self):
         self.patch(sys, "platform", "win32")
+        show_existing = self.patch(host, "show_existing_explorer", return_value=False)
         host.open_path(self.dir)
+        show_existing.assert_called_once_with(self.dir)
         self.popen.assert_called_once_with(["explorer", self.dir])
+
+    def test_directory_on_windows_reuses_the_open_window(self):
+        self.patch(sys, "platform", "win32")
+        self.patch(host, "show_existing_explorer", return_value=True)
+        result = host.open_path(self.dir)
+        self.popen.assert_not_called()
+        self.assertEqual(result, {"path": self.dir, "resultCode": "directory_opened"})
+
+    def test_mac_does_not_look_for_explorer_windows(self):
+        show_existing = self.patch(host, "show_existing_explorer", return_value=True)
+        self.patch(sys, "platform", "darwin")
+        host.open_path(self.dir)
+        host.open_path(self.file)
+        show_existing.assert_not_called()
+        self.assertEqual(self.popen.call_count, 2)
+
+    def test_file_on_windows_is_selected_in_the_open_window(self):
+        self.patch(sys, "platform", "win32")
+        show_existing = self.patch(host, "show_existing_explorer", return_value=True)
+        result = host.open_path(self.file)
+        show_existing.assert_called_once_with(self.dir, select=self.file)
+        self.popen.assert_not_called()
+        self.assertEqual(result, {"path": self.file, "resultCode": "file_opened"})
 
     def test_file_on_mac_reveals_in_finder(self):
         self.patch(sys, "platform", "darwin")
@@ -67,6 +92,7 @@ class OpenPathTest(TempDirTestCase):
 
     def test_file_on_windows_selects_in_explorer(self):
         self.patch(sys, "platform", "win32")
+        self.patch(host, "show_existing_explorer", return_value=False)
         host.open_path(self.file)
         self.popen.assert_called_once_with(["explorer", "/select,", self.file])
 
@@ -81,6 +107,21 @@ class OpenPathTest(TempDirTestCase):
         result = host.open_path(self.dir)
         self.popen.assert_not_called()
         self.assertEqual(result["resultCode"], "unsupported_platform")
+
+
+class ExplorerWindowTest(unittest.TestCase):
+    def test_location_url_to_path(self):
+        self.assertEqual(host.explorer_url_to_path("file:///C:/Users/Me/Box/My%20Team/%E8%B3%87%E6%96%99"),
+                         "c:\\users\\me\\box\\my team\\資料")
+        self.assertEqual(host.explorer_url_to_path("file:///C:/Users/me/Box/資料"), "c:\\users\\me\\box\\資料")
+
+    def test_special_places_have_no_path(self):
+        self.assertIsNone(host.explorer_url_to_path(""))
+        self.assertIsNone(host.explorer_url_to_path("::{20D04FE0-3AEA-1069-A2D8-08002B30309D}"))
+
+    @unittest.skipIf(sys.platform == "win32", "checks the fallback when COM is not available")
+    def test_returns_false_without_windows_com(self):
+        self.assertFalse(host.show_existing_explorer("C:\\Users\\me\\Box"))
 
 
 class OpenBoxPathTest(TempDirTestCase):
@@ -154,7 +195,7 @@ class PingTest(TempDirTestCase):
 
     def test_version_matches_the_extension(self):
         common_js = (HOST_DIR.parent / "common.js").read_text(encoding="utf-8")
-        self.assertIn(f"const REQUIRED_HOST_VERSION = {host.HOST_VERSION};", common_js)
+        self.assertIn(f"const LATEST_HOST_VERSION = {host.HOST_VERSION};", common_js)
 
 
 class MainTest(unittest.TestCase):

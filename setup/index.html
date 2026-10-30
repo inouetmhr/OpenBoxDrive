@@ -194,7 +194,7 @@
 		<span class="badge now" data-state="checking">
 			<span lang="en">Checking…</span><span lang="ja">確認中…</span>
 		</span>
-		<span class="badge now" data-state="not_installed wrong_extension_id host_failed host_outdated box_drive_missing">
+		<span class="badge now" data-state="not_installed wrong_extension_id host_failed host_legacy host_outdated box_drive_missing">
 			<span lang="en">Action needed</span><span lang="ja">対応が必要です</span>
 		</span>
 		<span class="badge ok" data-state="ready">
@@ -218,7 +218,7 @@
 			<!-- 1. Native messaging host ("helper") -->
 			<li class="step">
 				<span class="mark todo" data-state="checking">1</span>
-				<span class="mark now" data-state="not_installed host_outdated">1</span>
+				<span class="mark now" data-state="not_installed host_legacy host_outdated">1</span>
 				<span class="mark ng" data-state="wrong_extension_id host_failed">!</span>
 				<span class="mark ok" data-state="box_drive_missing ready">✓</span>
 				<div class="step-body">
@@ -233,6 +233,9 @@
 					</h2>
 					<h2 data-state="host_failed">
 						<span lang="en">The helper doesn't respond</span><span lang="ja">ヘルパーが応答しません</span>
+					</h2>
+					<h2 data-state="host_legacy">
+						<span lang="en">Update the helper</span><span lang="ja">ヘルパーの更新をお勧めします</span>
 					</h2>
 					<h2 data-state="host_outdated">
 						<span lang="en">Update the helper</span><span lang="ja">ヘルパーを更新してください</span>
@@ -250,8 +253,12 @@
 						<span lang="ja">ヘルパーが別の拡張機能 ID 向けに登録されています。拡張機能を入れ直したときや、別のフォルダから読み込んだときに起こります。</span>
 					</p>
 					<p data-state="host_failed">
-						<span lang="en">The helper is registered but couldn't start. Python may be unavailable, or the helper may be too old.</span>
-						<span lang="ja">ヘルパーは登録されていますが、起動できませんでした。Python が使えないか、ヘルパーが古い可能性があります。</span>
+						<span lang="en">The helper is registered but couldn't start. Python may be unavailable, or the helper may be broken. Set it up again.</span>
+						<span lang="ja">ヘルパーは登録されていますが、起動できませんでした。Python が使えないか、ヘルパーが壊れている可能性があります。もう一度セットアップしてください。</span>
+					</p>
+					<p data-state="host_legacy">
+						<span lang="en">An old version of the helper is installed. It keeps working, but we recommend updating it.</span>
+						<span lang="ja">古いバージョンのヘルパーが入っています。今のままでも使えますが、更新をお勧めします。</span>
 					</p>
 					<p class="muted" data-state="host_failed">
 						<span lang="en">Details:</span><span lang="ja">詳細:</span> <span class="error-detail"></span>
@@ -263,8 +270,12 @@
 					<p class="muted" data-state="box_drive_missing ready">
 						<span lang="en">Version</span><span lang="ja">バージョン</span> <span class="host-version"></span>
 					</p>
+					<p data-state="update_available">
+						<span lang="en">A newer helper is available. We recommend updating it; the current one keeps working.</span>
+						<span lang="ja">新しいヘルパーがあります。今のままでも使えますが、更新をお勧めします。</span>
+					</p>
 
-					<div data-state="not_installed wrong_extension_id host_failed host_outdated">
+					<div data-state="not_installed wrong_extension_id host_failed host_legacy host_outdated update_available">
 						<ol class="how-to">
 							<li data-os="windows">
 								<span lang="en"><a href="https://www.python.org/downloads/" target="_blank">Python 3</a> is required. The installer from python.org sets it up as the helper needs.</span>
@@ -308,12 +319,12 @@
 
 			<!-- 2. Box Drive folder, which only the helper can check -->
 			<li class="step">
-				<span class="mark todo" data-state="checking not_installed wrong_extension_id host_failed host_outdated">2</span>
+				<span class="mark todo" data-state="checking not_installed wrong_extension_id host_failed host_legacy host_outdated">2</span>
 				<span class="mark now" data-state="box_drive_missing">2</span>
 				<span class="mark ok" data-state="ready">✓</span>
 				<div class="step-body">
 					<h2>Box Drive</h2>
-					<p class="muted" data-state="checking not_installed wrong_extension_id host_failed host_outdated">
+					<p class="muted" data-state="checking not_installed wrong_extension_id host_failed host_legacy host_outdated">
 						<span lang="en">Checked after the helper is set up.</span>
 						<span lang="ja">ヘルパーのセットアップ後に確認します。</span>
 					</p>

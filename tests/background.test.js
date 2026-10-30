@@ -48,10 +48,12 @@ beforeEach(() => {
 	actionPopup = {};
 	popupAvailable = true;
 	chrome.runtime.openOptionsPage = () => { optionsPageOpened++; };
+	// nativeReply is a reply, or a function from the message to one
 	chrome.runtime.sendNativeMessage = (name, message, callback) => {
 		nativeMessages.push(message);
-		chrome.runtime.lastError = nativeReply.lastError;
-		callback(nativeReply.response);
+		const reply = typeof nativeReply === 'function' ? nativeReply(message) : nativeReply;
+		chrome.runtime.lastError = reply.lastError;
+		callback(reply.response);
 		delete chrome.runtime.lastError;
 	};
 	chrome.scripting = {
@@ -135,22 +137,41 @@ test('opens the setup page when the native host is too old to understand the req
 	assert.equal(optionsPageOpened, 1);
 });
 
-test('update: opens the setup page only when the installed helper is outdated', async () => {
+test('update: opens the setup page only when the installed helper is not the latest', async () => {
 	nativeReply = { response: { resultCode: 'bad_request', path: '' } };
 	await listeners.onInstalled({ reason: 'update' });
 	assert.equal(optionsPageOpened, 1);
-	nativeReply = { response: { resultCode: 'pong', version: 2, path: '/Box', boxDriveFound: true } };
+	nativeReply = { response: { resultCode: 'pong', version: 3, path: '/Box', boxDriveFound: true } };
 	await listeners.onInstalled({ reason: 'update' });
 	assert.equal(optionsPageOpened, 1);
 });
 
-test('update: leaves 1.x helpers alone, which exit on ping but still open Box folders', async () => {
+test('update: suggests a newer helper when the installed one still works', async () => {
+	nativeReply = { response: { resultCode: 'pong', version: 2, path: 'C:\\Users\\me\\Box', boxDriveFound: true } };
+	await listeners.onInstalled({ reason: 'update' });
+	assert.equal(optionsPageOpened, 1);
+	nativeReply = { response: { resultCode: 'pong', version: 3, path: 'C:\\Users\\me\\Box', boxDriveFound: true } };
+	await listeners.onInstalled({ reason: 'update' });
+	assert.equal(optionsPageOpened, 1);
+});
+
+test('update: opens the setup page when the helper doesn\'t start', async () => {
 	nativeReply = { lastError: { message: 'Native host has exited.' } };
 	await listeners.onInstalled({ reason: 'update' });
-	assert.equal(optionsPageOpened, 0);
+	assert.equal(optionsPageOpened, 1);
+});
+
+test('update: suggests updating 1.x helpers, which exit on ping but keep opening Box folders', async () => {
+	// 1.x helpers answer only filePath and boxPath
+	nativeReply = message => (message.filePath === ''
+		? { response: { resultCode: 'does_not_exist', path: '' } }
+		: { lastError: { message: 'Native host has exited.' } });
+	await listeners.onInstalled({ reason: 'update' });
+	assert.deepEqual(nativeMessages, [{ ping: true }, { filePath: '' }]);
+	assert.equal(optionsPageOpened, 1);
 	boxFolder();
 	nativeReply = { response: { resultCode: 'directory_opened', path: 'C:\\Users\\me\\Box\\Team' } };
 	await clickAction({ url: 'https://app.box.com/folder/1' });
 	assert.deepEqual(nativeMessages.at(-1), { boxPath: ['All Files', 'Team'] });
-	assert.equal(optionsPageOpened, 0);
+	assert.equal(optionsPageOpened, 1);
 });

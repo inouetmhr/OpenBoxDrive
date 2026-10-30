@@ -1,5 +1,5 @@
 // Stand-in for the chrome.* APIs so that the real setup page and feedback popup can be rendered for screenshots.
-// Query parameters: os=windows|mac, lang=ja|en, host=missing|ok (setup page), title / detail (popup)
+// Query parameters: os=windows|mac, lang=ja|en, host=missing|legacy|broken|ok, version=<helper version, default 3> (setup page), title / detail (popup)
 const params = new URLSearchParams(location.search);
 const userAgents = {
 	windows: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36',
@@ -19,13 +19,18 @@ window.chrome = {
 	runtime: {
 		id: 'abcdefghijklmnopabcdefghijklmnop',
 		sendNativeMessage: (name, message, callback) => {
-			if (params.get('host') === 'missing') {
-				chrome.runtime.lastError = { message: 'Specified native messaging host not found.' };
+			const fail = error => {
+				chrome.runtime.lastError = { message: error };
 				callback();
 				delete chrome.runtime.lastError;
-				return;
+			};
+			if (params.get('host') === 'missing') return fail('Specified native messaging host not found.');
+			// legacy: a 1.x helper that answers only filePath; broken: a helper that doesn't start
+			if (params.get('host') === 'legacy') {
+				return message.filePath === '' ? callback({ resultCode: 'does_not_exist', path: '' }) : fail('Native host has exited.');
 			}
-			callback({ resultCode: 'pong', version: 2, path: boxDrive, boxDriveFound: true });
+			if (params.get('host') === 'broken') return fail('Native host has exited.');
+			callback({ resultCode: 'pong', version: Number(params.get('version') ?? 3), path: boxDrive, boxDriveFound: true });
 		},
 	},
 	storage: {
